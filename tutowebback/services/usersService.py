@@ -14,11 +14,12 @@ class UsuarioService:
 
     def create_usuario(self, db: Session, usuario: schemas.UsuarioCreate):
         try:
-            # Verificar si el email ya existe
             existing_user = db.query(models.Usuario).filter(models.Usuario.email == usuario.email).first()
             if existing_user:
                 raise HTTPException(status_code=400, detail="Email already exists")
-
+            existing_rol = db.query(models.Rol).filter(models.Rol.id == usuario.id_rol).first()
+            if not existing_rol:
+                raise HTTPException(status_code=404, detail="Rol not found")
             # Crear el nuevo usuario
             db_usuario = models.Usuario(
                 nombre=usuario.nombre,
@@ -26,7 +27,8 @@ class UsuarioService:
                 email=usuario.email,
                 password_hash=auth.get_password_hash(usuario.password),
                 es_tutor=usuario.es_tutor,
-                foto_perfil=usuario.foto_perfil
+                foto_perfil=usuario.foto_perfil,
+                id_rol=usuario.id_rol
             )
             db.add(db_usuario)
             db.flush()
