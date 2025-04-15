@@ -24,8 +24,8 @@ async def get_all_usuarios(
     db: Session = Depends(database.get_db),
     current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "tutor"])),
 ):
-    from tutowebback.controllers import usuarioController
-    return await usuarioController.get_all_usuarios(db, current_user)
+    from tutowebback.controllers import userController
+    return await userController.get_all_usuarios(db, current_user)
 
 @router.get("/usuarios/tutores", response_model=None)
 async def get_tutores(
@@ -41,8 +41,8 @@ async def get_usuario(
     db: Session = Depends(database.get_db),
     current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "tutor", "estudiante"])),
 ):
-    from tutowebback.controllers import usuarioController
-    return await usuarioController.get_usuario(id, db, current_user)
+    from tutowebback.controllers import userController
+    return await userController.get_usuario(id, db, current_user)
 
 @router.put("/usuario/{id}", response_model=None)
 async def edit_usuario(
@@ -60,8 +60,8 @@ async def delete_usuario(
     db: Session = Depends(database.get_db),
     current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin"]))
 ):
-    from tutowebback.controllers import usuarioController
-    return await usuarioController.delete_usuario(id, db, current_user)
+    from tutowebback.controllers import userController
+    return await userController.delete_usuario(id, db, current_user)
 
 @router.post("/login", response_model=None)
 async def login(

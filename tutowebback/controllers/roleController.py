@@ -10,7 +10,7 @@ from tutowebback.config import database
 from tutowebback.services import roleService
 from tutowebback.auth.auth import get_current_user
 
-async def create_rol(rol: schemas.RolCreate, db: Session = Depends(database.get_db), current_user: schemas.User = Depends(get_current_user)):
+async def create_rol(rol: schemas.RolCreate, db: Session = Depends(database.get_db), current_user: schemas.Usuario=None):
     try:
         db_rol = roleService.RoleService().create_rol(db, rol)
         rol_response = db_rol.to_dict_rol()
@@ -26,7 +26,7 @@ async def create_rol(rol: schemas.RolCreate, db: Session = Depends(database.get_
         logging.error(f"Error creating role: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-async def get_all_roles(db: Session = Depends(database.get_db), current_user: schemas.User = Depends(get_current_user)):
+async def get_all_roles(db: Session = Depends(database.get_db),  current_user: schemas.Usuario=None):
     try:
         db_rol = roleService.RoleService().get_all_roles(db)
         rol_response = [rol.to_dict_rol() for rol in db_rol]
@@ -42,7 +42,7 @@ async def get_all_roles(db: Session = Depends(database.get_db), current_user: sc
         logging.error(f"Error retrieving role: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-async def get_role(id: int, db: Session = Depends(database.get_db), current_user: schemas.User = Depends(get_current_user)):
+async def get_role(id: int, db: Session = Depends(database.get_db),  current_user: schemas.Usuario=None):
     try:
         db_rol = roleService.RoleService().get_role(db, id)
         rol_response = db_rol.to_dict_rol()
@@ -58,7 +58,7 @@ async def get_role(id: int, db: Session = Depends(database.get_db), current_user
         logging.error(f"Error retrieving role: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-async def edit_rol(id: int, rol: schemas.RolUpdate, db: Session = Depends(database.get_db), current_user: schemas.User = Depends(get_current_user)):
+async def edit_rol(id: int, rol: schemas.RolUpdate, db: Session = Depends(database.get_db),  current_user: schemas.Usuario=None):
     try:
         db_rol = roleService.RoleService().edit_rol(db, id, rol)
         rol_response = db_rol.to_dict_rol()
@@ -75,7 +75,7 @@ async def edit_rol(id: int, rol: schemas.RolUpdate, db: Session = Depends(databa
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 ## Todo delete logic role
-async def delete_role(id: int, db: Session = Depends(database.get_db), current_user: schemas.User = Depends(get_current_user)):
+async def delete_role(id: int, db: Session = Depends(database.get_db),  current_user: schemas.Usuario=None):
     try:
         roleService.RoleService().delete_role(db, id)
         return {

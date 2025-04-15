@@ -64,7 +64,7 @@ class UsuarioService:
         return db_usuario
 
     def get_all_usuarios(self, db: Session):
-        db_usuarios = db.query(models.Usuario).all()
+        db_usuarios = db.query(models.Usuario).filter(models.Usuario.activo == True).all()
         if db_usuarios is None:
             raise HTTPException(status_code=404, detail="Usuarios not found")
         return db_usuarios
@@ -145,13 +145,13 @@ class UsuarioService:
     def delete_usuario(self, db: Session, usuario_id: int):
         db_usuario = self.get_usuario(db, usuario_id)
         try:
-            # Primero eliminamos las relaciones con carreras
             db.query(models.CarreraUsuario).filter(models.CarreraUsuario.usuario_id == usuario_id).delete()
-            # Luego eliminamos el usuario
-            db.delete(db_usuario)
+            db_usuario.activo = False
             db.commit()
-            return True
+            db.refresh(db_usuario)
+            return {"message": "Usuario desactivado correctamente"}
         except Exception as e:
             db.rollback()
-            logging.error(f"Error deleting usuario: {e}")
+            logging.error(f"Error realizando la baja lógica del usuario: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
+

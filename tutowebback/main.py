@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware import Middleware
 from tutowebback.models import models
 from tutowebback.config import database
-from tutowebback.urls import urlsUser
+from tutowebback.urls import urlsUser, urlsCarrera, urlsRole, urlsMaterias
 
 models.Base.metadata.create_all(bind=database.engine)
 
@@ -24,7 +24,9 @@ app = FastAPI(
 
 # Incluir todas las rutas definidas
 app.include_router(urlsUser.router)
-
+app.include_router(urlsCarrera.router)
+app.include_router(urlsRole.router)
+app.include_router(urlsMaterias.router)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=7000, reload=True)
