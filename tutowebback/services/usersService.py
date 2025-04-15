@@ -14,11 +14,12 @@ class UsuarioService:
 
     def create_usuario(self, db: Session, usuario: schemas.UsuarioCreate):
         try:
-            # Verificar si el email ya existe
             existing_user = db.query(models.Usuario).filter(models.Usuario.email == usuario.email).first()
             if existing_user:
                 raise HTTPException(status_code=400, detail="Email already exists")
-
+            existing_rol = db.query(models.Rol).filter(models.Rol.id == usuario.id_rol).first()
+            if not existing_rol:
+                raise HTTPException(status_code=404, detail="Rol not found")
             # Crear el nuevo usuario
             db_usuario = models.Usuario(
                 nombre=usuario.nombre,
@@ -26,7 +27,8 @@ class UsuarioService:
                 email=usuario.email,
                 password_hash=auth.get_password_hash(usuario.password),
                 es_tutor=usuario.es_tutor,
-                foto_perfil=usuario.foto_perfil
+                foto_perfil=usuario.foto_perfil,
+                id_rol=usuario.id_rol
             )
             db.add(db_usuario)
             db.flush()
@@ -62,7 +64,7 @@ class UsuarioService:
         return db_usuario
 
     def get_all_usuarios(self, db: Session):
-        db_usuarios = db.query(models.Usuario).all()
+        db_usuarios = db.query(models.Usuario).filter(models.Usuario.activo == True).all()
         if db_usuarios is None:
             raise HTTPException(status_code=404, detail="Usuarios not found")
         return db_usuarios
@@ -143,13 +145,13 @@ class UsuarioService:
     def delete_usuario(self, db: Session, usuario_id: int):
         db_usuario = self.get_usuario(db, usuario_id)
         try:
-            # Primero eliminamos las relaciones con carreras
             db.query(models.CarreraUsuario).filter(models.CarreraUsuario.usuario_id == usuario_id).delete()
-            # Luego eliminamos el usuario
-            db.delete(db_usuario)
+            db_usuario.activo = False
             db.commit()
-            return True
+            db.refresh(db_usuario)
+            return {"message": "Usuario desactivado correctamente"}
         except Exception as e:
             db.rollback()
-            logging.error(f"Error deleting usuario: {e}")
+            logging.error(f"Error realizando la baja lógica del usuario: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
+

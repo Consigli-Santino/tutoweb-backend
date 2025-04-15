@@ -50,6 +50,7 @@ class UsuarioCreate(UsuarioBase):
     es_tutor: bool = False
     foto_perfil: Optional[str] = None
     id_carrera: List[int]
+    id_rol : int
 
 class UsuarioUpdate(BaseModel):
     nombre: Optional[str] = None
