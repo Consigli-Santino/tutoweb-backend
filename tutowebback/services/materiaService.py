@@ -32,7 +32,8 @@ class MateriaService:
             db_materia = models.Materia(
                 nombre=materia.nombre,
                 carrera_id=materia.carrera_id,
-                descripcion=materia.descripcion
+                descripcion=materia.descripcion,
+                año_plan=materia.año_plan
             )
 
             db.add(db_materia)

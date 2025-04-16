@@ -124,7 +124,8 @@ class Materia(Base):
     id = Column(Integer, primary_key=True)
     nombre = Column(String(100), nullable=False)
     carrera_id = Column(Integer, ForeignKey('carreras.id', ondelete='CASCADE'), nullable=False)
-    descripcion = Column(Text, nullable=True)
+    descripcion = Column(Text, nullable=True),
+    año_plan = Column(Integer, nullable=True)
 
     # Relationships
     carrera = relationship("Carrera", back_populates="materias")
