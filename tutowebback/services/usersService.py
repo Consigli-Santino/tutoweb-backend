@@ -17,9 +17,13 @@ class UsuarioService:
             existing_user = db.query(models.Usuario).filter(models.Usuario.email == usuario.email).first()
             if existing_user:
                 raise HTTPException(status_code=400, detail="Email already exists")
-            existing_rol = db.query(models.Rol).filter(models.Rol.id == usuario.id_rol).first()
-            if not existing_rol:
-                raise HTTPException(status_code=404, detail="Rol not found")
+            # Verificar si las carreras existen
+            for carrera_id in usuario.id_carrera:
+                existing_carrera = db.query(models.Carrera).filter(models.Carrera.id == carrera_id).first()
+                if not existing_carrera:
+                    raise HTTPException(status_code=404, detail=f"Carrera with id {carrera_id} not found")
+
+
             # Crear el nuevo usuario
             db_usuario = models.Usuario(
                 nombre=usuario.nombre,
@@ -28,7 +32,8 @@ class UsuarioService:
                 password_hash=auth.get_password_hash(usuario.password),
                 es_tutor=usuario.es_tutor,
                 foto_perfil=usuario.foto_perfil,
-                id_rol=usuario.id_rol
+                id_rol=usuario.id_rol,
+
             )
             db.add(db_usuario)
             db.flush()

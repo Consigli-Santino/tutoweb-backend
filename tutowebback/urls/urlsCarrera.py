@@ -22,10 +22,9 @@ async def create_carrera(
 @router.get("/carreras/all", response_model=None)
 async def get_all_carreras(
     db: Session = Depends(database.get_db),
-    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "tutor", "estudiante"])),
 ):
     from tutowebback.controllers import carreraController
-    return await carreraController.get_all_carreras(db, current_user)
+    return await carreraController.get_all_carreras(db)
 
 @router.get("/carrera/{id}", response_model=None)
 async def get_carrera(

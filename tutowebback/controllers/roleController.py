@@ -88,3 +88,20 @@ async def delete_role(id: int, db: Session = Depends(database.get_db),  current_
     except Exception as e:
         logging.error(f"Error deleting role: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+async def get_all_roles_by_register(db):
+    try:
+        db_rol = roleService.RoleService().get_all_roles_by_register(db)
+        rol_response = [rol.to_dict_rol() for rol in db_rol]
+        return {
+            "success": True,
+            "data": rol_response,
+            "message": "Roles retrieved successfully"
+        }
+    except HTTPException as he:
+        logging.error(f"HTTP error retrieving role: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error retrieving role: {e}")
+    return None

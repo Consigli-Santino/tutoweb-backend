@@ -25,6 +25,12 @@ async def get_all_roles(
 ):
     from tutowebback.controllers import roleController
     return await roleController.get_all_roles(db, current_user)
+@router.get("/roles/all/register", response_model=None)
+async def get_all_roles_by_register(
+    db: Session = Depends(database.get_db),
+):
+    from tutowebback.controllers import roleController
+    return await roleController.get_all_roles_by_register(db)
 @router.get("/roles/{id}", response_model=None)
 async def get_role(
     id: int,
