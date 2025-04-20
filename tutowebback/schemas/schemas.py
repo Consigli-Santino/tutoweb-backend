@@ -47,7 +47,6 @@ class UsuarioBase(BaseModel):
 
 class UsuarioCreate(UsuarioBase):
     password: str
-    es_tutor: bool = False
     foto_perfil: Optional[str] = None
     id_carrera: List[int]
     id_rol : int
@@ -57,7 +56,6 @@ class UsuarioUpdate(BaseModel):
     apellido: Optional[str] = None
     email: Optional[EmailStr] = None
     password: Optional[str] = None
-    es_tutor: Optional[bool] = None
     foto_perfil: Optional[str] = None
     id_rol: Optional[int] = None
     id_carrera: Optional[List[int]] = None
@@ -65,7 +63,6 @@ class UsuarioUpdate(BaseModel):
 class Usuario(UsuarioBase):
     id: int
     fecha_registro: Optional[datetime] = None
-    es_tutor: bool
     puntuacion_promedio: float = 0
     cantidad_reseñas: int = 0
     foto_perfil: Optional[str] = None

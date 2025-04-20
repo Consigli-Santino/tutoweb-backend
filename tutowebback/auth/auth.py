@@ -66,7 +66,6 @@ def login_for_access_token(db: Session, email: str, password: str):
                 "nombre": user.nombre,
                 "apellido": user.apellido,
                 "email": user.email,
-                "es_tutor": user.es_tutor
             },
             "user_rol": rol.nombre if rol else None,
             "user_carreras": carreras

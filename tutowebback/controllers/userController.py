@@ -29,7 +29,6 @@ async def create_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(d
                 apellido=usuario.apellido,
                 email=usuario.email,
                 password=usuario.password,
-                es_tutor=usuario.es_tutor,
                 foto_perfil=None,
                 id_rol=usuario.id_rol,
                 id_carrera=usuario.id_carrera
@@ -186,4 +185,21 @@ async def delete_usuario(id: int, db: Session = Depends(database.get_db), curren
         raise he
     except Exception as e:
         logging.error(f"Error deleting usuario: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+async def get_usuario_by_email(email, db, current_user):
+    try:
+        db_usuario = usersService.UsuarioService().get_usuario_by_email(db, email)
+        usuario_response = db_usuario.to_dict_usuario()
+        return {
+            "success": True,
+            "data": usuario_response,
+            "message": "Get usuario by email successfully"
+        }
+    except HTTPException as he:
+        logging.error(f"HTTP error retrieving usuario by email: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error retrieving usuario by email: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")

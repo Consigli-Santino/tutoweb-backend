@@ -30,7 +30,6 @@ class UsuarioService:
                 apellido=usuario.apellido,
                 email=usuario.email,
                 password_hash=auth.get_password_hash(usuario.password),
-                es_tutor=usuario.es_tutor,
                 foto_perfil=usuario.foto_perfil,
                 id_rol=usuario.id_rol,
 
@@ -75,7 +74,9 @@ class UsuarioService:
         return db_usuarios
 
     def get_tutores(self, db: Session):
-        db_tutores = db.query(models.Usuario).filter(models.Usuario.es_tutor == True).all()
+        # Obtener todos los tutores
+        db_roles = db.query(models.Rol).filter(models.Rol.nombre == "alumno&tutor").first()
+        db_tutores = db.query(models.Usuario).filter(models.Usuario.activo == True, models.Usuario.id_rol == db_roles.id).all()
         if db_tutores is None:
             raise HTTPException(status_code=404, detail="Tutores not found")
         return db_tutores
@@ -96,8 +97,6 @@ class UsuarioService:
                 db_usuario.semestre = usuario.semestre
             if usuario.id_rol is not None:
                 db_usuario.id_rol = usuario.id_rol
-            if usuario.es_tutor is not None:
-                db_usuario.es_tutor = usuario.es_tutor
             if usuario.foto_perfil is not None:
                 db_usuario.foto_perfil = usuario.foto_perfil
             if usuario.descripcion is not None:
@@ -159,4 +158,11 @@ class UsuarioService:
             db.rollback()
             logging.error(f"Error realizando la baja lógica del usuario: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    def get_usuario_by_email(self, db, email):
+        db_usuario = db.query(models.Usuario).filter(models.Usuario.email == email).first()
+        if db_usuario is None:
+            raise HTTPException(status_code=404, detail="Usuario not found")
+        return db_usuario
+
 

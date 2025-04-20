@@ -54,7 +54,6 @@ class Usuario(Base):
     password_hash = Column(String(200), nullable=False)
     fecha_registro = Column(DateTime, default=datetime.utcnow)
     activo = Column(Boolean, default=True)
-    es_tutor = Column(Boolean, default=False)
     puntuacion_promedio = Column(Numeric(3, 2), default=0)
     cantidad_reseñas = Column(Integer, default=0)
     foto_perfil = Column(String(255), nullable=True)
@@ -81,7 +80,6 @@ class Usuario(Base):
             "apellido": self.apellido,
             "email": self.email,
             "fecha_registro": self.fecha_registro.isoformat() if self.fecha_registro else None,
-            "es_tutor": self.es_tutor,
             "puntuacion_promedio": float(self.puntuacion_promedio) if self.puntuacion_promedio else 0,
             "cantidad_reseñas": self.cantidad_reseñas,
             "foto_perfil": self.foto_perfil,

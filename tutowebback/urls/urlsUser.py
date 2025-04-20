@@ -30,7 +30,6 @@ async def register_form(
         apellido: str = Form(...),
         email: str = Form(...),
         password: str = Form(...),
-        es_tutor: bool = Form(False),
         id_carrera: List[int] = Form(...),
         profile_image: Optional[UploadFile] = File(None),
         id_rol: Optional[int] = Form(None),
@@ -42,7 +41,6 @@ async def register_form(
         apellido=apellido,
         email=email,
         password=password,
-        es_tutor=es_tutor,
         foto_perfil=None,  # Se actualizará después
         id_rol=id_rol,
         id_carrera=id_carrera
@@ -67,18 +65,17 @@ async def edit_usuario(
 
 # Endpoint para edición con imagen
 @router.put("/usuario/{id}/form", response_model=None)
-async def edit_usuario_form_by_user(
+async def edit_usuario_form(
         id: int,
         nombre: Optional[str] = Form(None),
         apellido: Optional[str] = Form(None),
         email: Optional[str] = Form(None),
         password: Optional[str] = Form(None),
-        es_tutor: Optional[bool] = Form(None),
         id_carrera: Optional[List[int]] = Form(None),
         profile_image: Optional[UploadFile] = File(None),
         id_rol: Optional[int] = Form(None),
         db: Session = Depends(database.get_db),
-        current_user: schemas.Usuario = Depends(auth.role_required(["alumno&profesor", "alumno"])),
+        current_user: schemas.Usuario = Depends(auth.role_required(["alumno&profesor", "alumno","superAdmin"])),
 ):
     # Crear objeto UsuarioUpdate
     usuario = schemas.UsuarioUpdate(
@@ -86,7 +83,6 @@ async def edit_usuario_form_by_user(
         apellido=apellido,
         email=email,
         password=password,
-        es_tutor=es_tutor,
         foto_perfil=None,  # Se actualizará en el controller
         id_rol=id_rol,
         id_carrera=id_carrera
@@ -117,14 +113,13 @@ async def get_all_usuarios(
     from tutowebback.controllers import userController
     return await userController.get_all_usuarios(db, current_user)
 
-
 @router.get("/usuarios/tutores", response_model=None)
 async def get_tutores(
-        db: Session = Depends(database.get_db),
-        current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "tutor", "estudiante"])),
+        db: Session = Depends(database.get_db)
+      ,
 ):
     from tutowebback.controllers import userController
-    return await userController.get_tutores(db, current_user)
+    return await userController.get_tutores(db)
 
 
 @router.get("/usuario/{id}", response_model=None)
@@ -135,6 +130,14 @@ async def get_usuario(
 ):
     from tutowebback.controllers import userController
     return await userController.get_usuario(id, db, current_user)
+@router.get("/usuario/by-email/{email}", response_model=None)
+async def get_usuario(
+        email: str,
+        db: Session = Depends(database.get_db),
+        current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "alumno"])),
+):
+    from tutowebback.controllers import userController
+    return await userController.get_usuario_by_email(email, db, current_user)
 
 
 @router.delete("/usuario/{id}", response_model=None)
