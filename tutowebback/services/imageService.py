@@ -20,7 +20,7 @@ class ImageService:
         self.base_dir.mkdir(exist_ok=True)
         self.profile_dir.mkdir(exist_ok=True)
 
-    async def save_profile_image(self, user_id: int, file: UploadFile) -> str:
+    async def save_profile_image(self, emailUser: str, file: UploadFile) -> str:
         """
         Guarda la imagen de perfil y devuelve la ruta para guardar en la BD
 
@@ -47,7 +47,7 @@ class ImageService:
 
             # Crear nombre único: perfil_[ID]_[TIMESTAMP].[ext]
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            filename = f"perfil_{user_id}_{timestamp}{file_extension}"
+            filename = f"perfil_{emailUser}_{timestamp}{file_extension}"
 
             # Ruta completa
             file_path = self.profile_dir / filename

@@ -64,9 +64,9 @@ async def edit_usuario(
 
 
 # Endpoint para edición con imagen
-@router.put("/usuario/{id}/form", response_model=None)
+@router.put("/usuario/{emailParam}/form", response_model=None)
 async def edit_usuario_form(
-        id: int,
+        emailParam: str,
         nombre: Optional[str] = Form(None),
         apellido: Optional[str] = Form(None),
         email: Optional[str] = Form(None),
@@ -90,7 +90,7 @@ async def edit_usuario_form(
 
     # Llamar al controlador con la imagen
     from tutowebback.controllers import userController
-    return await userController.edit_usuario(id, usuario, db, current_user, profile_image)
+    return await userController.edit_usuario(emailParam, usuario, db, current_user, profile_image)
 
 
 # Endpoint para servir imágenes

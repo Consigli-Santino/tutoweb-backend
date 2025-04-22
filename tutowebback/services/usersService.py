@@ -81,8 +81,8 @@ class UsuarioService:
             raise HTTPException(status_code=404, detail="Tutores not found")
         return db_tutores
 
-    def edit_usuario(self, db: Session, usuario_id: int, usuario: schemas.UsuarioUpdate):
-        db_usuario = self.get_usuario(db, usuario_id)
+    def edit_usuario(self, db: Session, emailParam: str, usuario: schemas.UsuarioUpdate):
+        db_usuario = self.get_usuario_by_email(db, emailParam)
         try:
             # Actualizar campos básicos si se proporcionan
             if usuario.nombre is not None:
@@ -93,19 +93,14 @@ class UsuarioService:
                 db_usuario.email = usuario.email
             if usuario.password is not None:
                 db_usuario.password_hash = auth.get_password_hash(usuario.password)
-            if usuario.semestre is not None:
-                db_usuario.semestre = usuario.semestre
             if usuario.id_rol is not None:
                 db_usuario.id_rol = usuario.id_rol
             if usuario.foto_perfil is not None:
                 db_usuario.foto_perfil = usuario.foto_perfil
-            if usuario.descripcion is not None:
-                db_usuario.descripcion = usuario.descripcion
-            if usuario.telefono is not None:
-                db_usuario.telefono = usuario.telefono
 
             # Actualizar carreras si se proporcionan
             if usuario.id_carrera is not None:
+
                 # Obtener las carreras actuales del usuario
                 current_carreras = db.query(models.CarreraUsuario).filter(models.CarreraUsuario.usuario_id == db_usuario.id).all()
                 current_carrera_ids = {carrera.carrera_id for carrera in current_carreras}
