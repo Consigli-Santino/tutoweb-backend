@@ -10,6 +10,10 @@ from tutowebback.models import models
 from tutowebback.schemas import schemas
 from tutowebback.auth import auth
 
+
+
+
+
 class UsuarioService:
 
     def create_usuario(self, db: Session, usuario: schemas.UsuarioCreate):
@@ -73,9 +77,15 @@ class UsuarioService:
             raise HTTPException(status_code=404, detail="Usuarios not found")
         return db_usuarios
 
+    @classmethod
+    def getRoleByName(cls,db, param):
+        db_roles = db.query(models.Rol).filter(models.Rol.nombre == param).first()
+        if db_roles is None:
+            raise HTTPException(status_code=404, detail="Rol not found")
+        return db_roles
     def get_tutores(self, db: Session):
-        # Obtener todos los tutores
-        db_roles = db.query(models.Rol).filter(models.Rol.nombre == "alumno&tutor").first()
+
+        db_roles = UsuarioService.getRoleByName(db, "alumno&tutor")
         db_tutores = db.query(models.Usuario).filter(models.Usuario.activo == True, models.Usuario.id_rol == db_roles.id).all()
         if db_tutores is None:
             raise HTTPException(status_code=404, detail="Tutores not found")
@@ -159,5 +169,17 @@ class UsuarioService:
         if db_usuario is None:
             raise HTTPException(status_code=404, detail="Usuario not found")
         return db_usuario
+
+    def get_tutores_by_carrera(self, db, id):
+        # Obtener todos los tutores
+        db_roles = UsuarioService.getRoleByName(db, "alumno&tutor")
+        db_tutores = db.query(models.Usuario).filter(models.Usuario.activo == True, models.Usuario.id_rol == db_roles.id).all()
+        if db_tutores is None:
+            raise HTTPException(status_code=404, detail="Tutores not found")
+        db_tutores = [tutor for tutor in db_tutores if any(carrera.carrera_id == id for carrera in tutor.carreras)]
+        if not db_tutores:
+            raise HTTPException(status_code=404, detail="No tutores found for this carrera")
+        return db_tutores
+
 
 

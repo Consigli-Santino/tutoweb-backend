@@ -43,6 +43,32 @@ class Carrera(Base):
             "facultad": self.facultad
         }
 
+class MateriasXCarreraXUsuario(Base):
+    __tablename__ = 'materias_x_carrera_x_usuario'
+
+    id = Column(Integer, primary_key=True)
+    estado = Column(Boolean, nullable=False)
+    usuario_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
+    materia_id = Column(Integer, ForeignKey('materias.id'), nullable=False)
+    carrera_id = Column(Integer, ForeignKey('carreras.id'), nullable=False)
+    # Relationships
+    usuario = relationship("Usuario", back_populates="materias")
+    materia = relationship("Materia", back_populates="usuarios")
+
+    # Unique constraint to avoid duplicates
+    __table_args__ = (
+        UniqueConstraint('usuario_id', 'materia_id', 'carrera_id', name='UQ_usuario_materia_carrera'),
+    )
+
+    def to_dict_materia_usuario(self):
+        return {
+            "id": self.id,
+            "estado": self.estado,
+            "usuario_id": self.usuario_id,
+            "materia_id": self.materia_id,
+            "carrera_id": self.carrera_id
+        }
+
 
 class Usuario(Base):
     __tablename__ = 'usuarios'

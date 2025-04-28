@@ -112,7 +112,14 @@ async def get_all_usuarios(
 ):
     from tutowebback.controllers import userController
     return await userController.get_all_usuarios(db, current_user)
-
+@router.get("/tutores/by/carrera/{id}", response_model=None)
+async def get_tutores_by_carrera(
+        id: int,
+        db: Session = Depends(database.get_db),
+        current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "tutor","alumno","alumno&tutor"])),
+):
+    from tutowebback.controllers import userController
+    return await userController.get_tutores_by_carrera(db, current_user,id)
 @router.get("/usuarios/tutores", response_model=None)
 async def get_tutores(
         db: Session = Depends(database.get_db)
@@ -134,7 +141,7 @@ async def get_usuario(
 async def get_usuario(
         email: str,
         db: Session = Depends(database.get_db),
-        current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "alumno"])),
+        current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "alumno","alumno&tutor"])),
 ):
     from tutowebback.controllers import userController
     return await userController.get_usuario_by_email(email, db, current_user)
