@@ -19,6 +19,30 @@ class Rol(RolBase):
     class Config:
         from_attributes = True
 
+class MateriasXCarreraXUsuarioBase(BaseModel):
+    estado: bool
+    usuario_id: int
+    materia_id: int
+    carrera_id: int
+
+
+class MateriasXCarreraXUsuarioCreate(MateriasXCarreraXUsuarioBase):
+    pass
+
+
+class MateriasXCarreraXUsuarioUpdate(BaseModel):
+    estado: Optional[bool] = None
+    usuario_id: Optional[int] = None
+    materia_id: Optional[int] = None
+    carrera_id: Optional[int] = None
+
+
+class MateriasXCarreraXUsuario(MateriasXCarreraXUsuarioBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
 # Esquemas para Carrera
 class CarreraBase(BaseModel):
     nombre: str

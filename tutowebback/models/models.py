@@ -52,8 +52,8 @@ class MateriasXCarreraXUsuario(Base):
     materia_id = Column(Integer, ForeignKey('materias.id'), nullable=False)
     carrera_id = Column(Integer, ForeignKey('carreras.id'), nullable=False)
     # Relationships
-    usuario = relationship("Usuario", back_populates="materias")
-    materia = relationship("Materia", back_populates="usuarios")
+    usuario = relationship("Usuario", backref="materias")
+    materia = relationship("Materia", backref="usuarios")
 
     # Unique constraint to avoid duplicates
     __table_args__ = (
