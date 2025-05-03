@@ -10,7 +10,8 @@ from starlette.middleware import Middleware
 from fastapi.staticfiles import StaticFiles
 from tutowebback.models import models
 from tutowebback.config import database
-from tutowebback.urls import urlsUser, urlsCarrera, urlsRole, urlsMaterias,urlsMateriasCarreraUsuario
+from tutowebback.urls import urlsUser, urlsCarrera, urlsRole, urlsMaterias, urlsMateriasCarreraUsuario, \
+    urlsDisponibilidad, urlsReserva, urlsServicioTutoria
 
 # Crear directorios para imágenes si no existen
 os.makedirs("uploads/profile_images", exist_ok=True)
@@ -31,6 +32,9 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Incluir todas las rutas definidas
 app.include_router(urlsUser.router)
+app.include_router(urlsServicioTutoria.router)
+app.include_router(urlsReserva.router)
+app.include_router(urlsDisponibilidad.router)
 app.include_router(urlsMateriasCarreraUsuario.router)
 app.include_router(urlsCarrera.router)
 app.include_router(urlsRole.router)

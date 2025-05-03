@@ -62,7 +62,14 @@ async def edit_usuario(
     from tutowebback.controllers import userController
     return await userController.edit_usuario(id, usuario, db, current_user)
 
-
+@router.get("/tutores/by/carrera/{carrera_id}/with-materias", response_model=None)
+async def get_tutores_by_carrera_with_materias(
+    carrera_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "tutor","alumno","alumno&tutor"])),
+):
+    from tutowebback.controllers import userController
+    return await userController.get_tutores_by_carrera_with_materias(db, current_user, carrera_id)
 # Endpoint para edición con imagen
 @router.put("/usuario/{emailParam}/form", response_model=None)
 async def edit_usuario_form(

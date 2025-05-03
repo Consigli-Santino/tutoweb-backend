@@ -41,7 +41,7 @@ async def get_materias_by_usuario_and_carrera(
     usuario_id: int,
     carrera_id: int,
     db: Session = Depends(database.get_db),
-    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "tutor", "estudiante"])),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "tutor", "alumno&tutor"])),
 ):
     from tutowebback.controllers import materiasXCarreraXUsuarioController
     return await materiasXCarreraXUsuarioController.get_materias_by_usuario_and_carrera(usuario_id, carrera_id, db, current_user)
@@ -70,7 +70,7 @@ async def edit_materia_carrera_usuario(
 async def delete_materia_carrera_usuario(
     id: int,
     db: Session = Depends(database.get_db),
-    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin"]))
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin","alumno&tutor"]))
 ):
     from tutowebback.controllers import materiasXCarreraXUsuarioController
     return await materiasXCarreraXUsuarioController.delete_materia_carrera_usuario(id, db, current_user)

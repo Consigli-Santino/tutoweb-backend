@@ -160,7 +160,8 @@ class Materia(Base):
             "id": self.id,
             "nombre": self.nombre,
             "carrera_id": self.carrera_id,
-            "descripcion": self.descripcion
+            "descripcion": self.descripcion,
+            "año_plan": self.año_plan,
         }
 
 

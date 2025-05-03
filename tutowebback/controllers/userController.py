@@ -22,16 +22,12 @@ async def create_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(d
     Implementa transaccionalidad para asegurar que todas las operaciones
     se completen correctamente o se revierta todo.
     """
-    # Iniciar una transacción explícita
-    transaction = db.begin_nested()
+    temp_path = None
 
     try:
-        temp_path = None
-        foto_path = None
-
         # Si hay imagen, guardarla temporalmente
         if profile_image:
-            # Guardar imagen pero no comprometer la DB aún
+            # Guardar imagen temporalmente
             temp_path = await image_service.save_profile_image(
                 emailUser=usuario.email,
                 file=profile_image
@@ -39,7 +35,6 @@ async def create_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(d
 
             # Si tenemos la ruta de la imagen, incluirla en el objeto usuario
             if temp_path:
-                # Crear copia del usuario con la imagen
                 usuario_con_imagen = schemas.UsuarioCreate(
                     nombre=usuario.nombre,
                     apellido=usuario.apellido,
@@ -49,10 +44,7 @@ async def create_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(d
                     id_rol=usuario.id_rol,
                     id_carrera=usuario.id_carrera
                 )
-
-                # Crear usuario con imagen
                 db_usuario = usersService.UsuarioService().create_usuario(db, usuario_con_imagen)
-                foto_path = temp_path
             else:
                 # Si falló el guardado de imagen, crear sin imagen
                 temp_usuario = schemas.UsuarioCreate(
@@ -69,8 +61,7 @@ async def create_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(d
             # Flujo normal sin imagen
             db_usuario = usersService.UsuarioService().create_usuario(db, usuario)
 
-        # Si llegamos aquí sin errores, confirmar la transacción
-        transaction.commit()
+        # Single commit at the controller level
         db.commit()
 
         # Preparar respuesta
@@ -82,27 +73,25 @@ async def create_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(d
             "message": "Usuario created successfully"
         }
 
-    except HTTPException as he:
-        # Revertir la transacción
-        transaction.rollback()
-
-        # Si hubo un error pero ya se guardó la imagen, eliminarla
-        if temp_path:
-            image_service.delete_profile_image(temp_path)
-
-        logging.error(f"HTTP error creating usuario: {he.detail}")
-        raise he
-
     except Exception as e:
-        # Revertir la transacción
-        transaction.rollback()
+        # Rollback at controller level
+        db.rollback()
 
         # Si hubo un error pero ya se guardó la imagen, eliminarla
         if temp_path:
             image_service.delete_profile_image(temp_path)
 
-        logging.error(f"Error creating usuario: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        logging.error(f"Error creating usuario: {str(e)}")
+
+        # Re-raise HTTPExceptions as-is
+        if isinstance(e, HTTPException):
+            raise e
+
+        # Convert other exceptions to HTTPException
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al crear usuario: {str(e)}"
+        )
 
 
 async def get_usuario(id: int, db: Session, current_user: schemas.Usuario = None):
@@ -164,16 +153,13 @@ async def edit_usuario(emailParam: str, usuario: schemas.UsuarioUpdate, db: Sess
     Implementa transaccionalidad para asegurar que todas las operaciones
     se completen correctamente o se revierta todo.
     """
-    # Iniciar una transacción explícita
-    transaction = db.begin_nested()
+    new_image_path = None
 
     try:
         # Obtener usuario actual para tener info de imagen antigua
         service = usersService.UsuarioService()
         db_usuario = service.get_usuario_by_email(db, emailParam)
         old_image_path = db_usuario.foto_perfil
-
-        new_image_path = None
 
         # Si hay nueva imagen, procesarla
         if profile_image:
@@ -190,8 +176,7 @@ async def edit_usuario(emailParam: str, usuario: schemas.UsuarioUpdate, db: Sess
         # Continuar con la actualización normal
         db_usuario = service.edit_usuario(db, emailParam, usuario)
 
-        # Si llegamos aquí sin errores, confirmar la transacción
-        transaction.commit()
+        # Commit a nivel de controlador
         db.commit()
 
         # Eliminar imagen anterior si existe y se subió una nueva exitosamente
@@ -207,26 +192,21 @@ async def edit_usuario(emailParam: str, usuario: schemas.UsuarioUpdate, db: Sess
             "message": "Usuario edited successfully"
         }
 
-    except HTTPException as he:
-        # Revertir la transacción
-        transaction.rollback()
-
-        # Si hubo un error pero ya se guardó la imagen nueva, eliminarla
-        if new_image_path:
-            image_service.delete_profile_image(new_image_path)
-
-        logging.error(f"HTTP error updating usuario: {he.detail}")
-        raise he
-
     except Exception as e:
-        # Revertir la transacción
-        transaction.rollback()
+        # Rollback a nivel de controlador
+        db.rollback()
 
         # Si hubo un error pero ya se guardó la imagen nueva, eliminarla
         if new_image_path:
             image_service.delete_profile_image(new_image_path)
 
-        logging.error(f"Error updating usuario: {e}")
+        # Re-raise HTTPExceptions as-is
+        if isinstance(e, HTTPException):
+            logging.error(f"HTTP error updating usuario: {e.detail}")
+            raise e
+
+        # Convert other exceptions to HTTPException
+        logging.error(f"Error updating usuario: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
@@ -289,4 +269,21 @@ async def get_tutores_by_carrera(db, current_user, id):
         raise he
     except Exception as e:
         logging.error(f"Error retrieving tutores by carrera: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+# En el controlador (userController.py)
+async def get_tutores_by_carrera_with_materias(db, current_user, carrera_id):
+    try:
+        db_tutores = usersService.UsuarioService().get_tutores_by_carrera_with_materias(db, carrera_id)
+        return {
+            "success": True,
+            "data": db_tutores,
+            "message": "Get tutores by carrera with materias successfully"
+        }
+    except HTTPException as he:
+        logging.error(f"HTTP error retrieving tutores by carrera with materias: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error retrieving tutores by carrera with materias: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
