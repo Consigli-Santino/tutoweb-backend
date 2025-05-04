@@ -43,6 +43,32 @@ class Carrera(Base):
             "facultad": self.facultad
         }
 
+class MateriasXCarreraXUsuario(Base):
+    __tablename__ = 'materias_x_carrera_x_usuario'
+
+    id = Column(Integer, primary_key=True)
+    estado = Column(Boolean, nullable=False)
+    usuario_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
+    materia_id = Column(Integer, ForeignKey('materias.id'), nullable=False)
+    carrera_id = Column(Integer, ForeignKey('carreras.id'), nullable=False)
+    # Relationships
+    usuario = relationship("Usuario", backref="materias")
+    materia = relationship("Materia", backref="usuarios")
+
+    # Unique constraint to avoid duplicates
+    __table_args__ = (
+        UniqueConstraint('usuario_id', 'materia_id', 'carrera_id', name='UQ_usuario_materia_carrera'),
+    )
+
+    def to_dict_materia_usuario(self):
+        return {
+            "id": self.id,
+            "estado": self.estado,
+            "usuario_id": self.usuario_id,
+            "materia_id": self.materia_id,
+            "carrera_id": self.carrera_id
+        }
+
 
 class Usuario(Base):
     __tablename__ = 'usuarios'
@@ -54,7 +80,6 @@ class Usuario(Base):
     password_hash = Column(String(200), nullable=False)
     fecha_registro = Column(DateTime, default=datetime.utcnow)
     activo = Column(Boolean, default=True)
-    es_tutor = Column(Boolean, default=False)
     puntuacion_promedio = Column(Numeric(3, 2), default=0)
     cantidad_reseñas = Column(Integer, default=0)
     foto_perfil = Column(String(255), nullable=True)
@@ -81,7 +106,6 @@ class Usuario(Base):
             "apellido": self.apellido,
             "email": self.email,
             "fecha_registro": self.fecha_registro.isoformat() if self.fecha_registro else None,
-            "es_tutor": self.es_tutor,
             "puntuacion_promedio": float(self.puntuacion_promedio) if self.puntuacion_promedio else 0,
             "cantidad_reseñas": self.cantidad_reseñas,
             "foto_perfil": self.foto_perfil,
@@ -125,6 +149,7 @@ class Materia(Base):
     nombre = Column(String(100), nullable=False)
     carrera_id = Column(Integer, ForeignKey('carreras.id', ondelete='CASCADE'), nullable=False)
     descripcion = Column(Text, nullable=True)
+    año_plan = Column(Integer, nullable=True)
 
     # Relationships
     carrera = relationship("Carrera", back_populates="materias")
@@ -135,7 +160,8 @@ class Materia(Base):
             "id": self.id,
             "nombre": self.nombre,
             "carrera_id": self.carrera_id,
-            "descripcion": self.descripcion
+            "descripcion": self.descripcion,
+            "año_plan": self.año_plan,
         }
 
 
@@ -169,7 +195,9 @@ class ServicioTutoria(Base):
             "precio": float(self.precio) if self.precio else 0,
             "descripcion": self.descripcion,
             "modalidad": self.modalidad,
-            "activo": self.activo
+            "activo": self.activo,
+            "materia": self.materia.to_dict_materia() if self.materia else None,
+            "tutor": self.tutor.to_dict_usuario() if self.tutor else None
         }
 
 

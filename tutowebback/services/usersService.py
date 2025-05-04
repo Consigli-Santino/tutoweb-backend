@@ -1,6 +1,6 @@
 import os
 import sys
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 import logging
@@ -10,6 +10,10 @@ from tutowebback.models import models
 from tutowebback.schemas import schemas
 from tutowebback.auth import auth
 
+
+
+
+
 class UsuarioService:
 
     def create_usuario(self, db: Session, usuario: schemas.UsuarioCreate):
@@ -17,18 +21,21 @@ class UsuarioService:
             existing_user = db.query(models.Usuario).filter(models.Usuario.email == usuario.email).first()
             if existing_user:
                 raise HTTPException(status_code=400, detail="Email already exists")
-            existing_rol = db.query(models.Rol).filter(models.Rol.id == usuario.id_rol).first()
-            if not existing_rol:
-                raise HTTPException(status_code=404, detail="Rol not found")
+
+            # Verificar si las carreras existen
+            for carrera_id in usuario.id_carrera:
+                existing_carrera = db.query(models.Carrera).filter(models.Carrera.id == carrera_id).first()
+                if not existing_carrera:
+                    raise HTTPException(status_code=404, detail=f"Carrera with id {carrera_id} not found")
+
             # Crear el nuevo usuario
             db_usuario = models.Usuario(
                 nombre=usuario.nombre,
                 apellido=usuario.apellido,
                 email=usuario.email,
                 password_hash=auth.get_password_hash(usuario.password),
-                es_tutor=usuario.es_tutor,
                 foto_perfil=usuario.foto_perfil,
-                id_rol=usuario.id_rol
+                id_rol=usuario.id_rol,
             )
             db.add(db_usuario)
             db.flush()
@@ -46,14 +53,14 @@ class UsuarioService:
                 db.add(db_carrera_usuario)
                 db.flush()
 
-            db.commit()
+            # Remove the db.commit() here - let the controller handle the commit
             db.refresh(db_usuario)
             return db_usuario
         except IntegrityError:
-            db.rollback()
+            # Remove db.rollback() here too
             raise HTTPException(status_code=400, detail="Email already exists")
         except Exception as e:
-            db.rollback()
+            # Remove db.rollback() here too
             logging.error(f"Error creating usuario: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
@@ -69,14 +76,22 @@ class UsuarioService:
             raise HTTPException(status_code=404, detail="Usuarios not found")
         return db_usuarios
 
+    @classmethod
+    def getRoleByName(cls,db, param):
+        db_roles = db.query(models.Rol).filter(models.Rol.nombre == param).first()
+        if db_roles is None:
+            raise HTTPException(status_code=404, detail="Rol not found")
+        return db_roles
     def get_tutores(self, db: Session):
-        db_tutores = db.query(models.Usuario).filter(models.Usuario.es_tutor == True).all()
+
+        db_roles = UsuarioService.getRoleByName(db, "alumno&tutor")
+        db_tutores = db.query(models.Usuario).filter(models.Usuario.activo == True, models.Usuario.id_rol == db_roles.id).all()
         if db_tutores is None:
             raise HTTPException(status_code=404, detail="Tutores not found")
         return db_tutores
 
-    def edit_usuario(self, db: Session, usuario_id: int, usuario: schemas.UsuarioUpdate):
-        db_usuario = self.get_usuario(db, usuario_id)
+    def edit_usuario(self, db: Session, emailParam: str, usuario: schemas.UsuarioUpdate):
+        db_usuario = self.get_usuario_by_email(db, emailParam)
         try:
             # Actualizar campos básicos si se proporcionan
             if usuario.nombre is not None:
@@ -87,23 +102,16 @@ class UsuarioService:
                 db_usuario.email = usuario.email
             if usuario.password is not None:
                 db_usuario.password_hash = auth.get_password_hash(usuario.password)
-            if usuario.semestre is not None:
-                db_usuario.semestre = usuario.semestre
             if usuario.id_rol is not None:
                 db_usuario.id_rol = usuario.id_rol
-            if usuario.es_tutor is not None:
-                db_usuario.es_tutor = usuario.es_tutor
             if usuario.foto_perfil is not None:
                 db_usuario.foto_perfil = usuario.foto_perfil
-            if usuario.descripcion is not None:
-                db_usuario.descripcion = usuario.descripcion
-            if usuario.telefono is not None:
-                db_usuario.telefono = usuario.telefono
 
             # Actualizar carreras si se proporcionan
             if usuario.id_carrera is not None:
                 # Obtener las carreras actuales del usuario
-                current_carreras = db.query(models.CarreraUsuario).filter(models.CarreraUsuario.usuario_id == db_usuario.id).all()
+                current_carreras = db.query(models.CarreraUsuario).filter(
+                    models.CarreraUsuario.usuario_id == db_usuario.id).all()
                 current_carrera_ids = {carrera.carrera_id for carrera in current_carreras}
 
                 # Convertir la lista de id_carrera a un set
@@ -131,14 +139,15 @@ class UsuarioService:
                         models.CarreraUsuario.carrera_id == carrera_id
                     ).delete()
 
-            db.commit()
+            # Remove db.commit() and db.rollback() from here
+            db.flush()  # Use flush instead of commit to update the session without committing
             db.refresh(db_usuario)
             return db_usuario
         except IntegrityError:
-            db.rollback()
+            # Don't rollback here
             raise HTTPException(status_code=400, detail="Email already exists")
         except Exception as e:
-            db.rollback()
+            # Don't rollback here
             logging.error(f"Error updating usuario: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
@@ -154,4 +163,50 @@ class UsuarioService:
             db.rollback()
             logging.error(f"Error realizando la baja lógica del usuario: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    def get_usuario_by_email(self, db, email):
+        db_usuario = db.query(models.Usuario).filter(models.Usuario.email == email).first()
+        if db_usuario is None:
+            raise HTTPException(status_code=404, detail="Usuario not found")
+        return db_usuario
+
+    def get_tutores_by_carrera(self, db, id):
+        # Obtener todos los tutores
+        db_roles = UsuarioService.getRoleByName(db, "alumno&tutor")
+        db_tutores = db.query(models.Usuario).filter(models.Usuario.activo == True, models.Usuario.id_rol == db_roles.id).all()
+        if db_tutores is None:
+            raise HTTPException(status_code=404, detail="Tutores not found")
+        db_tutores = [tutor for tutor in db_tutores if any(carrera.carrera_id == id for carrera in tutor.carreras)]
+        if not db_tutores:
+            raise HTTPException(status_code=404, detail="No tutores found for this carrera")
+        return db_tutores
+
+    def get_tutores_by_carrera_with_materias(self, db: Session, carrera_id: int):
+        # Obtener tutores básicos
+        db_tutores = self.get_tutores_by_carrera(db, carrera_id)
+
+        # Preparar la respuesta con tutores y sus materias
+        tutores_con_materias = []
+
+        for tutor in db_tutores:
+            # Obtener materias de este tutor para la carrera específica
+            materias_rel = db.query(models.MateriasXCarreraXUsuario).options(
+                joinedload(models.MateriasXCarreraXUsuario.materia)
+            ).filter(
+                models.MateriasXCarreraXUsuario.usuario_id == tutor.id,
+                models.MateriasXCarreraXUsuario.carrera_id == carrera_id,
+                models.MateriasXCarreraXUsuario.estado == True
+            ).all()
+
+            # Extraer nombres de materias
+            nombres_materias = [rel.materia.nombre for rel in materias_rel if rel.materia]
+
+            # Crear diccionario del tutor con materias incluidas
+            tutor_dict = tutor.to_dict_usuario()
+            tutor_dict['materias'] = nombres_materias
+
+            tutores_con_materias.append(tutor_dict)
+
+        return tutores_con_materias
+
 

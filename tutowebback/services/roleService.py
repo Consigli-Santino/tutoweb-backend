@@ -63,3 +63,7 @@ class RoleService:
             db.rollback()
             logging.error(f"Error deleting role: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    def get_all_roles_by_register(self, db):
+        db_rol = db.query(models.Rol).filter(models.Rol.nombre != "superAdmin").all()
+        return db_rol

@@ -22,7 +22,7 @@ async def create_materia(
 @router.get("/materias/all", response_model=None)
 async def get_all_materias(
     db: Session = Depends(database.get_db),
-    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "tutor", "estudiante"])),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "alumno","alumno&tutor","tutor", "estudiante"])),
 ):
     from tutowebback.controllers import materiaController
     return await materiaController.get_all_materias(db, current_user)
@@ -31,7 +31,7 @@ async def get_all_materias(
 async def get_materias_by_carrera(
     carrera_id: int,
     db: Session = Depends(database.get_db),
-    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "tutor", "estudiante"])),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin","alumno&tutor", "admin", "tutor", "estudiante"])),
 ):
     from tutowebback.controllers import materiaController
     return await materiaController.get_materias_by_carrera(carrera_id, db, current_user)

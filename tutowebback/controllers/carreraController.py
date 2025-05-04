@@ -43,7 +43,7 @@ async def get_carrera(id: int, db: Session, current_user: schemas.Usuario = None
         logging.error(f"Error retrieving carrera: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-async def get_all_carreras(db: Session, current_user: schemas.Usuario = None):
+async def get_all_carreras(db: Session):
     try:
         db_carreras = carreraService.CarreraService().get_all_carreras(db)
         carrera_responses = [carrera.to_dict_carrera() for carrera in db_carreras]

@@ -19,6 +19,30 @@ class Rol(RolBase):
     class Config:
         from_attributes = True
 
+class MateriasXCarreraXUsuarioBase(BaseModel):
+    estado: bool
+    usuario_id: int
+    materia_id: int
+    carrera_id: int
+
+
+class MateriasXCarreraXUsuarioCreate(MateriasXCarreraXUsuarioBase):
+    pass
+
+
+class MateriasXCarreraXUsuarioUpdate(BaseModel):
+    estado: Optional[bool] = None
+    usuario_id: Optional[int] = None
+    materia_id: Optional[int] = None
+    carrera_id: Optional[int] = None
+
+
+class MateriasXCarreraXUsuario(MateriasXCarreraXUsuarioBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
 # Esquemas para Carrera
 class CarreraBase(BaseModel):
     nombre: str
@@ -47,7 +71,6 @@ class UsuarioBase(BaseModel):
 
 class UsuarioCreate(UsuarioBase):
     password: str
-    es_tutor: bool = False
     foto_perfil: Optional[str] = None
     id_carrera: List[int]
     id_rol : int
@@ -57,7 +80,6 @@ class UsuarioUpdate(BaseModel):
     apellido: Optional[str] = None
     email: Optional[EmailStr] = None
     password: Optional[str] = None
-    es_tutor: Optional[bool] = None
     foto_perfil: Optional[str] = None
     id_rol: Optional[int] = None
     id_carrera: Optional[List[int]] = None
@@ -65,7 +87,6 @@ class UsuarioUpdate(BaseModel):
 class Usuario(UsuarioBase):
     id: int
     fecha_registro: Optional[datetime] = None
-    es_tutor: bool
     puntuacion_promedio: float = 0
     cantidad_reseñas: int = 0
     foto_perfil: Optional[str] = None
