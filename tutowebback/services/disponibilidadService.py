@@ -1,5 +1,7 @@
 import os
 import sys
+from datetime import date
+
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
@@ -59,6 +61,61 @@ class DisponibilidadService:
             raise HTTPException(status_code=404, detail="Disponibilidad not found")
         return db_disponibilidad
 
+    def get_disponibilidades_disponibles(self, db: Session, tutor_id: int, fecha: date):
+        """
+        Obtiene las disponibilidades realmente disponibles, eliminando las que ya tienen reservas
+        """
+        try:
+            # 1. Verificar si existe el tutor
+            existing_tutor = db.query(models.Usuario).filter(models.Usuario.id == tutor_id).first()
+            if not existing_tutor:
+                raise HTTPException(status_code=404, detail="Tutor not found")
+
+            # 2. Obtener el día de la semana de la fecha
+            dia_semana = fecha.isoweekday()  # 1=lunes, 7=domingo
+
+            # 3. Obtener todas las disponibilidades del tutor para ese día
+            disponibilidades = db.query(models.Disponibilidad).filter(
+                models.Disponibilidad.tutor_id == tutor_id,
+                models.Disponibilidad.dia_semana == dia_semana
+            ).all()
+
+            if not disponibilidades:
+                return []
+
+            # 4. Obtener servicios del tutor (para buscar reservas)
+            servicios = db.query(models.ServicioTutoria).filter(
+                models.ServicioTutoria.tutor_id == tutor_id,
+                models.ServicioTutoria.activo == True
+            ).all()
+
+            if not servicios:
+                return disponibilidades  # Si no hay servicios, no puede haber reservas
+
+            # 5. Obtener todas las reservas para ese tutor en esa fecha
+            servicio_ids = [servicio.id for servicio in servicios]
+            reservas = db.query(models.Reserva).filter(
+                models.Reserva.servicio_id.in_(servicio_ids),
+                models.Reserva.fecha == fecha,
+                models.Reserva.estado.in_(["pendiente", "confirmada"])
+            ).all()
+            disponibilidades_disponibles = []
+
+            for disp in disponibilidades:
+                reserva_solapada = False
+                for reserva in reservas:
+                    if ((disp.hora_inicio <= reserva.hora_inicio and reserva.hora_inicio < disp.hora_fin) or
+                            (disp.hora_inicio < reserva.hora_fin and reserva.hora_fin <= disp.hora_fin) or
+                            (reserva.hora_inicio <= disp.hora_inicio and disp.hora_fin <= reserva.hora_fin)):
+                        reserva_solapada = True
+                        break
+                if not reserva_solapada:
+                    disponibilidades_disponibles.append(disp)
+
+            return disponibilidades_disponibles
+        except Exception as e:
+            logging.error(f"Error getting disponibilidades disponibles: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
     def get_disponibilidades_by_tutor(self, db: Session, tutor_id: int):
         # Verificar si existe el tutor
         existing_tutor = db.query(models.Usuario).filter(models.Usuario.id == tutor_id).first()

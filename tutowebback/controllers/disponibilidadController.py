@@ -1,5 +1,7 @@
 import os
 import sys
+from datetime import datetime
+
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 import logging
@@ -32,6 +34,29 @@ async def create_disponibilidad(disponibilidad: schemas.DisponibilidadCreate, db
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
+async def get_disponibilidades_disponibles(tutor_id: int, fecha_str: str, db: Session, current_user: schemas.Usuario):
+    try:
+        # Convertir string a objeto date
+        try:
+            fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Formato de fecha incorrecto. Use YYYY-MM-DD")
+
+        disponibilidades = disponibilidadService.DisponibilidadService().get_disponibilidades_disponibles(db, tutor_id,
+                                                                                                          fecha)
+        disponibilidad_responses = [disp.to_dict_disponibilidad() for disp in disponibilidades]
+
+        return {
+            "success": True,
+            "data": disponibilidad_responses,
+            "message": "Get disponibilidades disponibles successfully"
+        }
+    except HTTPException as he:
+        logging.error(f"HTTP error retrieving disponibilidades disponibles: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error retrieving disponibilidades disponibles: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 async def get_disponibilidad(id: int, db: Session, current_user: schemas.Usuario):
     try:
         db_disponibilidad = disponibilidadService.DisponibilidadService().get_disponibilidad(db, id)

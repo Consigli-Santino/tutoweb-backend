@@ -237,9 +237,6 @@ async def delete_usuario(id: int, db: Session = Depends(database.get_db), curren
 
 async def get_usuario_by_email(email, db, current_user):
     try:
-        if current_user['email'] != email:
-            if current_user.id_rol != "superAdmin":
-                raise HTTPException(status_code=403, detail="No tienes permiso para acceder a este recurso")
         db_usuario = usersService.UsuarioService().get_usuario_by_email(db, email)
         usuario_response = db_usuario.to_dict_usuario()
         return {

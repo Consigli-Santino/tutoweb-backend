@@ -1,6 +1,6 @@
 import os
 import sys
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -18,7 +18,15 @@ async def create_disponibilidad(
 ):
     from tutowebback.controllers import disponibilidadController
     return await disponibilidadController.create_disponibilidad(disponibilidad, db, current_user)
-
+@router.get("/disponibilidades/disponibles/{tutor_id}/{fecha}", response_model=None)
+async def get_disponibilidades_disponibles(
+    tutor_id: int,
+    fecha: str ,
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "alumno&tutor", "tutor", "estudiante"])),
+):
+    from tutowebback.controllers import disponibilidadController
+    return await disponibilidadController.get_disponibilidades_disponibles(tutor_id, fecha, db, current_user)
 @router.get("/disponibilidades/tutor/{tutor_id}", response_model=None)
 async def get_disponibilidades_by_tutor(
     tutor_id: int,

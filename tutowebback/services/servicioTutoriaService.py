@@ -46,7 +46,7 @@ class ServicioTutoriaService:
                 models.ServicioTutoria.materia_id == servicio.materia_id
             ).first()
 
-            if servicio_existente:
+            if servicio_existente.activo:
                 raise HTTPException(
                     status_code=400,
                     detail="Ya existe un servicio para esta materia"
@@ -84,11 +84,11 @@ class ServicioTutoriaService:
             raise HTTPException(status_code=404, detail="Servicio not found")
         return db_servicio
 
-    def get_servicios_by_tutor(self, db: Session, tutor_id: int):
-        return db.query(models.ServicioTutoria).options(
+    def get_servicios_by_tutor(self, db: Session, email: str):
+        return db.query(models.ServicioTutoria).join(models.Usuario).options(
             joinedload(models.ServicioTutoria.materia)
         ).filter(
-            models.ServicioTutoria.tutor_id == tutor_id,
+            models.Usuario.email == email,
             models.ServicioTutoria.activo == True
         ).all()
 

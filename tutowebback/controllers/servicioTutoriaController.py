@@ -52,9 +52,9 @@ async def get_servicio(id: int, db: Session, current_user: schemas.Usuario):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-async def get_servicios_by_tutor(tutor_id: int, db: Session, current_user: schemas.Usuario):
+async def get_servicios_by_tutor(email: str, db: Session, current_user: schemas.Usuario):
     try:
-        db_servicios = servicioTutoriaService.ServicioTutoriaService().get_servicios_by_tutor(db, tutor_id)
+        db_servicios = servicioTutoriaService.ServicioTutoriaService().get_servicios_by_tutor(db, email)
         servicios_response = [servicio.to_dict_servicio_tutoria() for servicio in db_servicios]
 
         return {

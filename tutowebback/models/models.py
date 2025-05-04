@@ -195,7 +195,9 @@ class ServicioTutoria(Base):
             "precio": float(self.precio) if self.precio else 0,
             "descripcion": self.descripcion,
             "modalidad": self.modalidad,
-            "activo": self.activo
+            "activo": self.activo,
+            "materia": self.materia.to_dict_materia() if self.materia else None,
+            "tutor": self.tutor.to_dict_usuario() if self.tutor else None
         }
 
 
