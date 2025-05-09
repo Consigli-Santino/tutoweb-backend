@@ -241,7 +241,7 @@ class Reserva(Base):
     estado = Column(String(20))
     notas = Column(Text, nullable=True)
     fecha_creacion = Column(DateTime, default=datetime.utcnow)
-
+    sala_virtual = Column(String(255), nullable=True)
     # Check constraints
     __table_args__ = (
         CheckConstraint("estado IN ('pendiente', 'confirmada', 'completada', 'cancelada')"),
@@ -265,6 +265,7 @@ class Reserva(Base):
             "hora_fin": self.hora_fin.isoformat() if self.hora_fin else None,
             "estado": self.estado,
             "notas": self.notas,
+            "sala_virtual": self.sala_virtual,
             "fecha_creacion": self.fecha_creacion.isoformat() if self.fecha_creacion else None
         }
 

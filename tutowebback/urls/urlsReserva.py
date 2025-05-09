@@ -39,6 +39,16 @@ async def get_reservas_by_estudiante(
 ):
     from tutowebback.controllers import reservaController
     return await reservaController.get_reservas_by_estudiante(db, current_user)
+
+# Nuevo endpoint para obtener reservas detalladas del estudiante
+@router.get("/reservas/estudiante/detalladas", response_model=None)
+async def get_reservas_by_estudiante_detalladas(
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.get_current_user),
+):
+    from tutowebback.controllers import reservaController
+    return await reservaController.get_reservas_by_estudiante_detalladas(db, current_user)
+
 # En urlsReserva.py
 @router.get("/reservas/check", response_model=None)
 async def check_reservas(
@@ -49,6 +59,7 @@ async def check_reservas(
 ):
     from tutowebback.controllers import reservaController
     return await reservaController.check_reservas(tutor_id, fecha, db)
+
 @router.get("/reservas/tutor", response_model=None)
 async def get_reservas_by_tutor(
     db: Session = Depends(database.get_db),
@@ -56,6 +67,15 @@ async def get_reservas_by_tutor(
 ):
     from tutowebback.controllers import reservaController
     return await reservaController.get_reservas_by_tutor(db, current_user)
+
+# Nuevo endpoint para obtener reservas detalladas del tutor
+@router.get("/reservas/tutor/detalladas", response_model=None)
+async def get_reservas_by_tutor_detalladas(
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.get_current_user),
+):
+    from tutowebback.controllers import reservaController
+    return await reservaController.get_reservas_by_tutor_detalladas(db, current_user)
 
 @router.put("/reserva/{id}", response_model=None)
 async def edit_reserva(

@@ -6,13 +6,12 @@ from sqlalchemy.orm import Session
 import logging
 from datetime import datetime, date
 
-from tutowebback.models import models
-
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tutowebback.schemas import schemas
 from tutowebback.config import database
 from tutowebback.services import reservaService
 from tutowebback.auth import auth
+
 
 async def create_reserva(reserva: schemas.ReservaCreate, db: Session, current_user: schemas.Usuario):
     try:
@@ -20,6 +19,7 @@ async def create_reserva(reserva: schemas.ReservaCreate, db: Session, current_us
         if reserva.estudiante_id != current_user["id"] and current_user["user_rol"] not in ["superAdmin", "admin"]:
             raise HTTPException(status_code=403, detail="Solo puedes crear reservas para ti mismo")
 
+        # Delegar toda la lógica al servicio
         db_reserva = reservaService.ReservaService().create_reserva(db, reserva)
         reserva_response = db_reserva.to_dict_reserva()
 
@@ -36,7 +36,6 @@ async def create_reserva(reserva: schemas.ReservaCreate, db: Session, current_us
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-# En reservaController.py
 async def check_reservas(tutor_id: int, fecha_str: str, db: Session):
     try:
         # Convertir string a objeto date
@@ -45,28 +44,8 @@ async def check_reservas(tutor_id: int, fecha_str: str, db: Session):
         except ValueError:
             raise HTTPException(status_code=400, detail="Formato de fecha incorrecto. Use YYYY-MM-DD")
 
-        # Obtener servicios del tutor
-        servicios = db.query(models.ServicioTutoria).filter(
-            models.ServicioTutoria.tutor_id == tutor_id,
-            models.ServicioTutoria.activo == True
-        ).all()
-
-        if not servicios:
-            return {
-                "success": True,
-                "data": [],
-                "message": "No hay servicios para este tutor"
-            }
-
-        # Obtener IDs de servicios
-        servicio_ids = [servicio.id for servicio in servicios]
-
-        # Obtener todas las reservas para los servicios del tutor en la fecha dada
-        reservas = db.query(models.Reserva).filter(
-            models.Reserva.servicio_id.in_(servicio_ids),
-            models.Reserva.fecha == fecha,
-            models.Reserva.estado.in_(["pendiente", "confirmada"])
-        ).all()
+        # Delegar la lógica al servicio
+        reservas = reservaService.ReservaService().check_reservas_by_fecha_tutor(db, tutor_id, fecha)
 
         # Convertir a formato de respuesta
         reservas_response = [reserva.to_dict_reserva() for reserva in reservas]
@@ -82,8 +61,11 @@ async def check_reservas(tutor_id: int, fecha_str: str, db: Session):
     except Exception as e:
         logging.error(f"Error checking reservas: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
 async def get_reserva(id: int, db: Session, current_user: schemas.Usuario):
     try:
+        # Obtener la reserva del servicio
         db_reserva = reservaService.ReservaService().get_reserva(db, id)
 
         # Verificar que el usuario pueda ver esta reserva
@@ -107,9 +89,40 @@ async def get_reserva(id: int, db: Session, current_user: schemas.Usuario):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
+async def get_reserva_detallada(id: int, db: Session, current_user: schemas.Usuario):
+    try:
+        # Obtener la reserva detallada
+        service = reservaService.ReservaService()
+        db_reserva = service.get_reserva(db, id)
+
+        # Verificar que el usuario pueda ver esta reserva
+        if (db_reserva.estudiante_id != current_user["id"] and
+                db_reserva.tutor_id != current_user["id"] and
+                current_user["user_rol"] not in ["superAdmin", "admin"]):
+            raise HTTPException(status_code=403, detail="No estás autorizado para ver esta reserva")
+
+        # Obtener detalles completos
+        reserva_response = service.get_reserva_detallada(db, id)
+
+        return {
+            "success": True,
+            "data": reserva_response,
+            "message": "Get reserva detallada successfully"
+        }
+    except HTTPException as he:
+        logging.error(f"HTTP error retrieving reserva detallada: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error retrieving reserva detallada: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
 async def get_reservas_by_estudiante(db: Session, current_user: schemas.Usuario):
     try:
-        db_reservas = reservaService.ReservaService().get_reservas_by_estudiante(current_user["id"])
+        # Delegar la lógica al servicio
+        db_reservas = reservaService.ReservaService().get_reservas_by_estudiante(db, current_user["id"])
+
+        # Transformar las reservas en formato de respuesta
         reserva_responses = [reserva.to_dict_reserva() for reserva in db_reservas]
 
         return {
@@ -125,9 +138,31 @@ async def get_reservas_by_estudiante(db: Session, current_user: schemas.Usuario)
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
+async def get_reservas_by_estudiante_detalladas(db: Session, current_user: schemas.Usuario):
+    try:
+        # Delegar la lógica al servicio
+        reserva_responses = reservaService.ReservaService().get_reservas_by_estudiante_detalladas(db,
+                                                                                                  current_user["id"])
+
+        return {
+            "success": True,
+            "data": reserva_responses,
+            "message": "Get reservas detalladas by estudiante successfully"
+        }
+    except HTTPException as he:
+        logging.error(f"HTTP error retrieving detailed reservas: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error retrieving detailed reservas: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
 async def get_reservas_by_tutor(db: Session, current_user: schemas.Usuario):
     try:
-        db_reservas = reservaService.ReservaService().get_reservas_by_tutor(current_user["id"])
+        # Delegar la lógica al servicio
+        db_reservas = reservaService.ReservaService().get_reservas_by_tutor(db, current_user["id"])
+
+        # Transformar a formato de respuesta
         reserva_responses = [reserva.to_dict_reserva() for reserva in db_reservas]
 
         return {
@@ -143,34 +178,38 @@ async def get_reservas_by_tutor(db: Session, current_user: schemas.Usuario):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
+async def get_reservas_by_tutor_detalladas(db: Session, current_user: schemas.Usuario):
+    try:
+        # Delegar la lógica al servicio
+        reserva_responses = reservaService.ReservaService().get_reservas_by_tutor_detalladas(db, current_user["id"])
+
+        return {
+            "success": True,
+            "data": reserva_responses,
+            "message": "Get reservas detalladas by tutor successfully"
+        }
+    except HTTPException as he:
+        logging.error(f"HTTP error retrieving detailed reservas for tutor: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error retrieving detailed reservas for tutor: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
 async def edit_reserva(id: int, reserva: schemas.ReservaUpdate, db: Session, current_user: schemas.Usuario):
     try:
-        # Obtener la reserva para verificar permisos
-        service = reservaService.ReservaService()
-        db_reserva = service.get_reserva(db, id)
-
-        # Verificar que el usuario pueda editar esta reserva
-        is_estudiante = db_reserva.estudiante_id == current_user["id"]
-        is_tutor = db_reserva.tutor_id == current_user["id"]
+        # Comprobar si el usuario es admin
         is_admin = current_user["user_rol"] in ["superAdmin", "admin"]
 
-        if not (is_estudiante or is_tutor or is_admin):
-            raise HTTPException(status_code=403, detail="No estás autorizado para editar esta reserva")
+        # Delegar toda la lógica al servicio
+        db_reserva = reservaService.ReservaService().edit_reserva(
+            db,
+            id,
+            reserva,
+            current_user["id"],
+            is_admin
+        )
 
-        # Restricciones según tipo de usuario
-        if is_estudiante and not is_admin:
-            # Estudiantes solo pueden cancelar, no cambiar estado a confirmada o completada
-            if reserva.estado and reserva.estado not in ["cancelada"]:
-                raise HTTPException(status_code=403,
-                                    detail="Como estudiante solo puedes cancelar la reserva")
-
-        if is_tutor and not is_admin:
-            # Tutores pueden confirmar, completar o cancelar, pero no cambiar fecha
-            if reserva.fecha:
-                raise HTTPException(status_code=403,
-                                    detail="Como tutor no puedes cambiar la fecha de la reserva")
-
-        db_reserva = service.edit_reserva(db, id, reserva)
         reserva_response = db_reserva.to_dict_reserva()
 
         return {
@@ -186,9 +225,11 @@ async def edit_reserva(id: int, reserva: schemas.ReservaUpdate, db: Session, cur
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
+
+
 async def delete_reserva(id: int, db: Session, current_user: schemas.Usuario):
     try:
-        # Obtener la reserva para verificar permisos
+        # Obtener la reserva
         service = reservaService.ReservaService()
         db_reserva = service.get_reserva(db, id)
 
@@ -198,6 +239,7 @@ async def delete_reserva(id: int, db: Session, current_user: schemas.Usuario):
             raise HTTPException(status_code=403,
                                 detail="No estás autorizado para eliminar esta reserva")
 
+        # Delegar la eliminación al servicio
         result = service.delete_reserva(db, id)
 
         return {
@@ -220,7 +262,10 @@ async def get_disponibilidades_disponibles(tutor_id: int, fecha_str: str, db: Se
         except ValueError:
             raise HTTPException(status_code=400, detail="Formato de fecha incorrecto. Use YYYY-MM-DD")
 
+        # Delegar la lógica al servicio
         disponibilidades = reservaService.ReservaService().get_disponibilidades_disponibles(db, tutor_id, fecha)
+
+        # Convertir a formato de respuesta
         disponibilidad_responses = [disp.to_dict_disponibilidad() for disp in disponibilidades]
 
         return {
@@ -233,4 +278,28 @@ async def get_disponibilidades_disponibles(tutor_id: int, fecha_str: str, db: Se
         raise he
     except Exception as e:
         logging.error(f"Error retrieving disponibilidades: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+async def get_horarios_disponibles(servicio_id: int, fecha_str: str, db: Session):
+    try:
+        # Convertir string a objeto date
+        try:
+            fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Formato de fecha incorrecto. Use YYYY-MM-DD")
+
+        # Delegar la lógica al servicio
+        slots = reservaService.ReservaService().get_horarios_disponibles(db, servicio_id, fecha)
+
+        return {
+            "success": True,
+            "data": slots,
+            "message": "Get horarios disponibles successfully"
+        }
+    except HTTPException as he:
+        logging.error(f"HTTP error retrieving horarios disponibles: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error retrieving horarios disponibles: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
