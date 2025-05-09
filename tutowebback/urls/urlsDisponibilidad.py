@@ -23,7 +23,7 @@ async def get_disponibilidades_disponibles(
     tutor_id: int,
     fecha: str ,
     db: Session = Depends(database.get_db),
-    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "alumno&tutor", "tutor", "estudiante"])),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin","alumno", "alumno&tutor", "tutor", "estudiante"])),
 ):
     from tutowebback.controllers import disponibilidadController
     return await disponibilidadController.get_disponibilidades_disponibles(tutor_id, fecha, db, current_user)
@@ -31,7 +31,7 @@ async def get_disponibilidades_disponibles(
 async def get_disponibilidades_by_tutor(
     tutor_id: int,
     db: Session = Depends(database.get_db),
-    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "alumno&tutor", "tutor", "estudiante"])),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin","alumno", "alumno&tutor", "tutor", "estudiante"])),
 ):
     from tutowebback.controllers import disponibilidadController
     return await disponibilidadController.get_disponibilidades_by_tutor(tutor_id, db, current_user)

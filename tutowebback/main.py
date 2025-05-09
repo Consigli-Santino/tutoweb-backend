@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from tutowebback.models import models
 from tutowebback.config import database
 from tutowebback.urls import urlsUser, urlsCarrera, urlsRole, urlsMaterias, urlsMateriasCarreraUsuario, \
-    urlsDisponibilidad, urlsReserva, urlsServicioTutoria
+    urlsDisponibilidad, urlsReserva, urlsServicioTutoria,urlsNotificacion
 
 # Crear directorios para imágenes si no existen
 os.makedirs("uploads/profile_images", exist_ok=True)
@@ -32,6 +32,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Incluir todas las rutas definidas
 app.include_router(urlsUser.router)
+app.include_router(urlsNotificacion.router)
 app.include_router(urlsServicioTutoria.router)
 app.include_router(urlsReserva.router)
 app.include_router(urlsDisponibilidad.router)

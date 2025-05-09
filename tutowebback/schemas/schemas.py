@@ -239,6 +239,7 @@ class ReservaUpdate(BaseModel):
     hora_fin: Optional[time] = None
     notas: Optional[str] = None
     estado: Optional[str] = None
+    sala_virtual: Optional[str] = None
 
     @validator('estado')
     def validate_estado(cls, v):

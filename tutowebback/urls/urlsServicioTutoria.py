@@ -34,7 +34,7 @@ async def get_servicio(
 async def get_servicios_by_tutor(
     email: str,
     db: Session = Depends(database.get_db),
-    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "alumno&tutor", "tutor", "estudiante"])),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "alumno", "alumno&tutor", "tutor", "estudiante"])),
 ):
     from tutowebback.controllers import servicioTutoriaController
     return await servicioTutoriaController.get_servicios_by_tutor(email, db, current_user)
