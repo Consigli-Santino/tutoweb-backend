@@ -1,6 +1,8 @@
 import os
 import sys
 
+from tutowebback.services.mercadoPagoService import MercadoPagoService
+
 # Add the project root directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -11,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from tutowebback.models import models
 from tutowebback.config import database
 from tutowebback.urls import urlsUser, urlsCarrera, urlsRole, urlsMaterias, urlsMateriasCarreraUsuario, \
-    urlsDisponibilidad, urlsReserva, urlsServicioTutoria,urlsNotificacion
+    urlsDisponibilidad, urlsReserva, urlsServicioTutoria,urlsNotificacion,urlsPago
 
 # Crear directorios para imágenes si no existen
 os.makedirs("uploads/profile_images", exist_ok=True)
@@ -36,10 +38,46 @@ app.include_router(urlsNotificacion.router)
 app.include_router(urlsServicioTutoria.router)
 app.include_router(urlsReserva.router)
 app.include_router(urlsDisponibilidad.router)
+app.include_router(urlsPago.router)
 app.include_router(urlsMateriasCarreraUsuario.router)
 app.include_router(urlsCarrera.router)
 app.include_router(urlsRole.router)
 app.include_router(urlsMaterias.router)
+
+# Endpoint para crear usuario vendedor de prueba (solo ejecutar una vez)
+@app.get("/crear-usuario-vendedor")
+def endpoint_crear_vendedor():
+    mp_service = MercadoPagoService()
+    vendedor = mp_service.crear_usuario_vendedor()
+    if vendedor:
+        return {
+            "message": "Usuario vendedor de prueba creado exitosamente",
+            "vendedor": vendedor
+        }
+    else:
+        return {
+            "message": "Error al crear usuario vendedor de prueba"
+        }
+
+
+# Endpoint para probar la creación de preferencia
+@app.get("/crear-preferencia-prueba")
+def endpoint_crear_preferencia():
+    mp_service = MercadoPagoService()
+    preferencia = mp_service.crear_preferencia(
+        titulo="Producto de prueba",
+        precio=100,
+        cantidad=1,
+        reserva_id=1,
+        pago_id=1,
+        notas="Prueba de integración"
+    )
+
+    return {
+        "message": "Preferencia creada exitosamente",
+        "checkout_url": preferencia["init_point"],
+        "id": preferencia["id"]
+    }
 
 if __name__ == "__main__":
     import uvicorn
