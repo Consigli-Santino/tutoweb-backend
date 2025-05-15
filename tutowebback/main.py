@@ -1,7 +1,7 @@
 import os
 import sys
 
-from tutowebback.services.mercadoPagoService import MercadoPagoService
+from services.mercadoPagoService import MercadoPagoService
 
 # Add the project root directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

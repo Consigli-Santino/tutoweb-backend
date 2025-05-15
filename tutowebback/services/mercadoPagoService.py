@@ -15,9 +15,14 @@ load_dotenv(env_file)
 class MercadoPagoService:
     def __init__(self):
         # Usar credenciales de prueba
-        self.access_token = os.getenv("MERCADOPAGO_ACCESS_TOKEN",
-                                      "TEST-2784401808757106-051013-668a9ab9589cc89b0e9406f10b8dcc63-1314524421")
-        self.public_key = os.getenv("MERCADOPAGO_PUBLIC_KEY", "TEST-7fd540ed-5002-4b29-832b-c3a3ff6f83ad")
+        self.access_token = os.getenv(
+            "MERCADOPAGO_ACCESS_TOKEN",
+            "TEST-2784401808757106-051013-668a9ab9589cc89b0e9406f10b8dcc63-1314524421"
+        )
+        self.public_key = os.getenv(
+            "MERCADOPAGO_PUBLIC_KEY",
+            "TEST-7fd540ed-5002-4b29-832b-c3a3ff6f83ad"
+        )
 
         self.sdk = mercadopago.SDK(self.access_token)
 
@@ -26,10 +31,13 @@ class MercadoPagoService:
         Crea una preferencia de pago en Mercado Pago
         """
         try:
-            # Obtener la URL base del frontend
-            frontend_url = os.getenv('FRONTEND_URL', 'http://192.168.0.38:5173')
+            # Obtener la URL base del backend - debe ser accesible desde internet (URL de ngrok)
+            backend_url = os.getenv('BACKEND_URL', 'https://88dc-181-91-212-87.ngrok-free.app')
 
-            # Configurar los items de la preferencia
+            # Verifica que backend_url no sea localhost si estás usando auto_return
+            if 'localhost' in backend_url or '127.0.0.1' in backend_url:
+                logging.warning("Backend URL es local. Mercado Pago no podrá redirigir correctamente.")
+
             preference_data = {
                 "items": [
                     {
@@ -42,22 +50,34 @@ class MercadoPagoService:
                 "external_reference": f"reserva_{reserva_id}_pago_{pago_id}",
                 "statement_descriptor": "TutoWeb - Pago de Tutoría",
                 "back_urls": {
-                    "success": f"{frontend_url}/payment-success",
-                    "failure": f"{frontend_url}/payment-failure",
-                    "pending": f"{frontend_url}/payment-pending"
-                }
-                # Omitir notification_url para pruebas locales
+                    "success": f"{backend_url}/pago/callback?status=approved&reserva_id={reserva_id}&pago_id={pago_id}",
+                    "failure": f"{backend_url}/pago/callback?status=failure&reserva_id={reserva_id}&pago_id={pago_id}",
+                    "pending": f"{backend_url}/pago/callback?status=pending&reserva_id={reserva_id}&pago_id={pago_id}"
+                },
+                # Si estás teniendo problemas con auto_return, puedes intentar quitarlo temporalmente
+                "auto_return": "approved",
+                "binary_mode": True,
+                # Agregamos notification_url para webhooks (opcional)
+                "notification_url": f"{backend_url}/webhook/mercadopago"
             }
 
+            # Agregar notas si existen
             if notas:
                 preference_data["items"][0]["description"] = notas
+
+            # Log para debugging
+            logging.info(f"Creando preferencia con datos: {preference_data}")
 
             # Crear la preferencia
             preference_response = self.sdk.preference().create(preference_data)
 
+            # Verificar respuesta
             if preference_response["status"] != 201 and preference_response["status"] != 200:
                 logging.error(f"Error creando preferencia: {preference_response}")
                 raise HTTPException(status_code=500, detail="Error al crear preferencia de pago")
+
+            # Log para debugging
+            logging.info(f"Preferencia creada con éxito: {preference_response['response']['id']}")
 
             return preference_response["response"]
 

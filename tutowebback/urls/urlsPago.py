@@ -1,6 +1,6 @@
 import os
 import sys
-from fastapi import APIRouter, Depends, BackgroundTasks, Body
+from fastapi import APIRouter, Depends, BackgroundTasks, Body, Query, Request
 from sqlalchemy.orm import Session
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -20,6 +20,13 @@ async def create_pago(
     from tutowebback.controllers import pagoController
     return await pagoController.create_pago(pago, db, current_user, background_tasks)
 
+@router.get("/pago/callback", response_model=None)
+async def callback_handler(
+    request: Request,
+    db: Session = Depends(database.get_db)
+):
+    from tutowebback.controllers import pagoController
+    return await pagoController.payment_callback(request, db)
 @router.put("/pago/{pago_id}/estado/{estado}", response_model=None)
 async def update_pago_estado(
     pago_id: int,

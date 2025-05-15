@@ -1,6 +1,7 @@
 import os
 import sys
-from fastapi import Depends, HTTPException, BackgroundTasks, Body
+from fastapi import APIRouter, Depends, Query as QueryParam, HTTPException, BackgroundTasks, Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 import logging
 from datetime import datetime
@@ -155,7 +156,7 @@ async def webhook_mercadopago(payment_data: dict, db: Session, background_tasks:
             raise HTTPException(status_code=400, detail="ID de pago no proporcionado")
 
         # Procesar la notificación
-        result = pagoService.PagoService().process_webhook_notification(db, payment_id)
+        result, db_pago = pagoService.PagoService().process_webhook_notification(db, payment_id)
 
         if result:
             # Enviar notificación en segundo plano
@@ -229,7 +230,98 @@ def notificar_pago(db: Session, pago_id: int, reserva_id: int, metodo_pago: str,
     except Exception as e:
         logging.error(f"Error enviando notificación de pago: {e}")
 
-
+async def payment_callback(
+    request: Request,
+    db: Session = Depends(database.get_db)
+):
+    """
+    Endpoint para procesar el callback de Mercado Pago cuando el usuario vuelve
+    """
+    try:
+        # Obtener todos los parámetros de la URL
+        params = dict(request.query_params)
+        logging.info(f"Payment callback recibido con parámetros: {params}")
+        
+        # Extraer los parámetros principales
+        status = params.get('status')
+        reserva_id = params.get('reserva_id')
+        pago_id = params.get('pago_id')
+        payment_id = params.get('payment_id')
+        
+        # Verificar parámetros esenciales
+        if not status or not reserva_id or not pago_id:
+            logging.error("Parámetros incompletos en callback")
+            return RedirectResponse(
+                url=f"{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/payment-failure?error=missing_params", 
+                status_code=302
+            )
+        
+        # Convertir a tipos adecuados
+        try:
+            reserva_id = int(reserva_id)
+            pago_id = int(pago_id)
+        except (ValueError, TypeError):
+            logging.error(f"Valores inválidos: reserva_id={reserva_id}, pago_id={pago_id}")
+            return RedirectResponse(
+                url=f"{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/payment-failure?error=invalid_values", 
+                status_code=302
+            )
+            
+        # Mapear el estado de Mercado Pago a nuestro modelo
+        estado_mapping = {
+            "approved": "completado",
+            "pending": "pendiente",
+            "failure": "cancelado",
+            "in_process": "pendiente"
+        }
+        
+        nuevo_estado = estado_mapping.get(status, "pendiente")
+        
+        # Buscar el pago en la base de datos
+        db_pago = db.query(models.Pago).filter(
+            models.Pago.id == pago_id,
+            models.Pago.reserva_id == reserva_id
+        ).first()
+        
+        if not db_pago:
+            logging.error(f"Pago no encontrado: id={pago_id}, reserva_id={reserva_id}")
+            return RedirectResponse(
+                url=f"{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/payment-failure?error=payment_not_found", 
+                status_code=302
+            )
+            
+        # Actualizar el pago
+        db_pago.estado = nuevo_estado
+        
+        # Si el pago está completado, actualizar fecha de pago y referencia externa
+        if nuevo_estado == "completado":
+            db_pago.fecha_pago = datetime.now()
+            
+            # Si tenemos el ID de pago de Mercado Pago, guardarlo como referencia
+            if payment_id:
+                db_pago.referencia_externa = payment_id
+                
+        db.commit()
+        logging.info(f"Pago {pago_id} actualizado correctamente a estado: {nuevo_estado}")
+        
+        # Determinar URL de redirección basada en el estado
+        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+        
+        # Redirigir directamente a reservas con un mensaje de estado
+        redirect_url = f"{frontend_url}/reservas?payment_status={status}&reserva_id={reserva_id}"
+        logging.info(f"Redirigiendo a: {redirect_url}")
+        
+        # Usar redirección 302 (Found) en lugar de 307 (Temporary Redirect)
+        return RedirectResponse(url=redirect_url, status_code=302)
+        
+    except Exception as e:
+        logging.error(f"Error en payment_callback: {str(e)}")
+        # En caso de error, redirigir a una página de error
+        frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+        return RedirectResponse(
+            url=f"{frontend_url}/reservas?payment_error=true", 
+            status_code=302
+        )
 def notificar_pago_webhook(db: Session, payment_id: str):
     try:
         # Consultar el pago en MercadoPago

@@ -1,6 +1,6 @@
 import os
 import sys
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, aliased
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 import logging
@@ -170,10 +170,16 @@ class ReservaService:
         """
         Obtiene todas las reservas de un estudiante con detalles completos
         """
-        # Obtener todas las reservas del estudiante
+        subquery_pagos_completados = db.query(models.Pago.reserva_id).filter(
+        models.Pago.estado == "completado"
+    ).subquery()
+
+    # Obtener todas las reservas del estudiante, excluyendo las que tienen pagos "completados"
         db_reservas = db.query(models.Reserva).filter(
-            models.Reserva.estudiante_id == estudiante_id
-        ).all()
+        models.Reserva.estudiante_id == estudiante_id,
+        ~models.Reserva.id.in_(subquery_pagos_completados)  # Excluir reservas con pagos "completados"
+    ).all()
+        
 
         # Crear respuesta detallada con información adicional
         reserva_responses = []
@@ -242,9 +248,18 @@ class ReservaService:
         servicio_ids = [servicio.id for servicio in servicios]
 
         # Obtener reservas para esos servicios
+          # Subquery para verificar pagos pendientes
+        Pago = aliased(models.Pago)
+        subquery_pagos_pendientes = db.query(Pago.reserva_id).filter(
+    Pago.estado == "pendiente"
+).subquery()
+
+# Consulta principal
         db_reservas = db.query(models.Reserva).filter(
-            models.Reserva.servicio_id.in_(servicio_ids)
-        ).all()
+    models.Reserva.servicio_id.in_(servicio_ids),
+    ~models.Reserva.estado.in_(["cancelada"]),  # Excluir canceladas
+    (models.Reserva.estado != "completada") | (models.Reserva.id.in_(subquery_pagos_pendientes))
+).all()
 
         # Crear respuesta detallada
         reserva_responses = []

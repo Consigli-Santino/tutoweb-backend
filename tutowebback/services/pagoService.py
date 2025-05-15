@@ -193,52 +193,70 @@ class PagoService:
         Obtiene un pago por su ID
         """
         return db.query(models.Pago).filter(models.Pago.id == pago_id).first()
-
+    
     def process_webhook_notification(self, db: Session, payment_id: str):
         """
-        Procesa una notificación de pago de MercadoPago
+        Procesa una notificación de pago recibida desde MercadoPago
         """
         try:
             # Consultar el pago en MercadoPago
             mp_service = mercadoPagoService.MercadoPagoService()
             payment_info = mp_service.consultar_pago(payment_id)
-
-            # Verificar si hay external_reference y procesar
+            
+            # Verificar el estado del pago
+            status = payment_info.get("status", "")
+            
+            # Obtener la external_reference
             external_reference = payment_info.get("external_reference", "")
             if not external_reference or "_pago_" not in external_reference:
                 logging.warning(f"External reference inválida: {external_reference}")
-                return False
-
+                return False, None
+                
             # Extraer IDs de reserva y pago
-            parts = external_reference.split("_")
-            if len(parts) < 4:
+            try:
+                parts = external_reference.split("_")
+                reserva_id = int(parts[1])
+                pago_id = int(parts[3])
+            except (IndexError, ValueError):
                 logging.warning(f"Formato de external reference incorrecto: {external_reference}")
-                return False
-
-            reserva_id = int(parts[1])
-            pago_id = int(parts[3])
-
-            # Obtener el pago en la base de datos
+                return False, None
+                
+            # Obtener el pago en nuestra base de datos
             db_pago = self.get_pago_by_id(db, pago_id)
             if not db_pago:
                 logging.warning(f"Pago con ID {pago_id} no encontrado")
-                return False
-
-            # Actualizar el estado según la respuesta de MercadoPago
-            status = payment_info.get("status")
-            if status == "approved":
-                db_pago.estado = "completado"
-                db_pago.fecha_pago = datetime.utcnow()
-                db_pago.referencia_externa = external_reference
-            elif status == "rejected" or status == "cancelled":
-                db_pago.estado = "cancelado"
-            elif status == "in_process" or status == "pending":
-                db_pago.estado = "pendiente"
-
-            db.commit()
-            return True
-
+                return False, None
+                
+            # Mapear los estados de MercadoPago a nuestros estados
+            estado_mapping = {
+                "approved": "completado",
+                "pending": "pendiente",
+                "rejected": "cancelado",
+                "cancelled": "cancelado",
+                "refunded": "reembolsado",
+                "charged_back": "cancelado"
+            }
+            
+            nuevo_estado = estado_mapping.get(status, db_pago.estado)
+            
+            # Si el estado ha cambiado, actualizarlo
+            if nuevo_estado != db_pago.estado:
+                db_pago.estado = nuevo_estado
+                
+                # Si el pago está aprobado, actualizar la fecha de pago
+                if nuevo_estado == "completado" and not db_pago.fecha_pago:
+                    db_pago.fecha_pago = datetime.now()
+                    
+                # Guardar la referencia externa
+                db_pago.referencia_externa = payment_id
+                
+                db.commit()
+                db.refresh(db_pago)
+                
+            return True, db_pago
+                
         except Exception as e:
+            logging.error(f"Error procesando notificación de webhook: {e}")
             db.rollback()
-            logging.error(f"Error processing webhook notification: {e}")
-            return False
+            return False, None
+    
