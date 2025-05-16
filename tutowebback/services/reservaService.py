@@ -1,6 +1,6 @@
 import os
 import sys
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, aliased
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
 import logging
@@ -170,10 +170,11 @@ class ReservaService:
         """
         Obtiene todas las reservas de un estudiante con detalles completos
         """
-        # Obtener todas las reservas del estudiante
+
+    # Obtener todas las reservas del estudiante, excluyendo las que tienen pagos "completados"
         db_reservas = db.query(models.Reserva).filter(
-            models.Reserva.estudiante_id == estudiante_id
-        ).all()
+        models.Reserva.estudiante_id == estudiante_id).all()
+        
 
         # Crear respuesta detallada con información adicional
         reserva_responses = []
@@ -242,9 +243,18 @@ class ReservaService:
         servicio_ids = [servicio.id for servicio in servicios]
 
         # Obtener reservas para esos servicios
+          # Subquery para verificar pagos pendientes
+        Pago = aliased(models.Pago)
+        subquery_pagos_pendientes = db.query(Pago.reserva_id).filter(
+    Pago.estado == "pendiente"
+).subquery()
+
+# Consulta principal
         db_reservas = db.query(models.Reserva).filter(
-            models.Reserva.servicio_id.in_(servicio_ids)
-        ).all()
+    models.Reserva.servicio_id.in_(servicio_ids),
+    ~models.Reserva.estado.in_(["cancelada"]),  # Excluir canceladas
+    (models.Reserva.estado != "completada") | (models.Reserva.id.in_(subquery_pagos_pendientes))
+).all()
 
         # Crear respuesta detallada
         reserva_responses = []
@@ -601,3 +611,78 @@ class ReservaService:
             logging.error(f"Error deleting reserva: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
 
+    def get_all_reservas_detalladas(self, db: Session):
+        """
+        Obtiene todas las reservas del sistema con información detallada (para admin)
+        Incluye información del servicio, materia, tutor y estudiante
+        """
+        try:
+            # Obtener todas las reservas
+            reservas = db.query(models.Reserva).all()
+            
+            # Ordenar reservas: primero pendientes y confirmadas, luego por fecha más cercana
+            sorted_reservas = sorted(reservas, key=lambda r: (
+                0 if r.estado == "pendiente" else
+                1 if r.estado == "confirmada" else
+                2 if r.estado == "completada" else 3,
+                r.fecha
+            ))
+            
+            # Preparar respuesta detallada
+            reserva_responses = []
+            
+            for reserva in sorted_reservas:
+                # Datos básicos de la reserva
+                reserva_dict = reserva.to_dict_reserva()
+                
+                # Obtener servicio asociado con materia y tutor
+                servicio = db.query(models.ServicioTutoria).filter(
+                    models.ServicioTutoria.id == reserva.servicio_id
+                ).options(
+                    joinedload(models.ServicioTutoria.materia),
+                    joinedload(models.ServicioTutoria.tutor)
+                ).first()
+                
+                # Añadir información del servicio
+                if servicio:
+                    reserva_dict["servicio"] = servicio.to_dict_servicio_tutoria()
+                    
+                    # Añadir información del tutor
+                    if hasattr(servicio, 'tutor') and servicio.tutor:
+                        reserva_dict["tutor"] = servicio.tutor.to_dict_usuario()
+                    
+                    # Añadir información de la materia
+                    if hasattr(servicio, 'materia') and servicio.materia:
+                        reserva_dict["materia"] = servicio.materia.to_dict_materia()
+                
+                # Obtener información del estudiante
+                estudiante = db.query(models.Usuario).filter(
+                    models.Usuario.id == reserva.estudiante_id
+                ).first()
+                
+                if estudiante:
+                    reserva_dict["estudiante"] = estudiante.to_dict_usuario()
+                
+                # Obtener información de pago (si existe)
+                pago = db.query(models.Pago).filter(
+                    models.Pago.reserva_id == reserva.id
+                ).order_by(models.Pago.fecha_creacion.desc()).first()
+                
+                if pago:
+                    reserva_dict["pago"] = pago.to_dict_pago()
+                
+                # Obtener calificación (si existe)
+                calificacion = db.query(models.Calificacion).filter(
+                    models.Calificacion.reserva_id == reserva.id
+                ).first()
+                
+                if calificacion:
+                    reserva_dict["calificacion"] = calificacion.to_dict_calificacion()
+                
+                reserva_responses.append(reserva_dict)
+            
+            return reserva_responses
+            
+        except Exception as e:
+            logging.error(f"Error obteniendo todas las reservas detalladas: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
