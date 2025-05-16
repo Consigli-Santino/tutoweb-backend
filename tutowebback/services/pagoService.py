@@ -259,4 +259,34 @@ class PagoService:
             logging.error(f"Error procesando notificación de webhook: {e}")
             db.rollback()
             return False, None
-    
+    def get_pagos_by_estudiante(self, db: Session, estudiante_id: int):
+        """
+        Obtiene todos los pagos asociados a las reservas de un estudiante
+        """
+        try:
+            # Primero obtenemos todas las reservas del estudiante
+            reservas = db.query(models.Reserva).filter(
+                models.Reserva.estudiante_id == estudiante_id
+            ).all()
+            
+            if not reservas:
+                return []
+                
+            # Obtenemos los IDs de las reservas
+            reserva_ids = [reserva.id for reserva in reservas]
+            
+            # Ahora obtenemos todos los pagos asociados a esas reservas
+            pagos = db.query(models.Pago).filter(
+                models.Pago.reserva_id.in_(reserva_ids)
+            ).all()
+            
+            # Organizamos los pagos por reserva_id para fácil acceso
+            pagos_dict = {pago.reserva_id: pago for pago in pagos}
+            
+            return pagos_dict
+            
+        except Exception as e:
+            logging.error(f"Error getting pagos by estudiante: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+
+

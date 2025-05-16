@@ -32,7 +32,13 @@ def get_notificaciones(
         "data": notificaciones_response,
         "message": "Get notificaciones successfully"
     }
-
+@router.get("/calificaciones/estudiante/reservas", response_model=None)
+async def get_calificaciones_for_estudiante_reservas(
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.get_current_user),
+):
+    from tutowebback.controllers import calificacionController
+    return await calificacionController.get_calificaciones_for_estudiante_reservas(db, current_user)
 
 @router.put("/notificaciones/{notificacion_id}/leer", response_model=None)
 def marcar_notificacion_como_leida(

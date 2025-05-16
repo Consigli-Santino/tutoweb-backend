@@ -170,15 +170,10 @@ class ReservaService:
         """
         Obtiene todas las reservas de un estudiante con detalles completos
         """
-        subquery_pagos_completados = db.query(models.Pago.reserva_id).filter(
-        models.Pago.estado == "completado"
-    ).subquery()
 
     # Obtener todas las reservas del estudiante, excluyendo las que tienen pagos "completados"
         db_reservas = db.query(models.Reserva).filter(
-        models.Reserva.estudiante_id == estudiante_id,
-        ~models.Reserva.id.in_(subquery_pagos_completados)  # Excluir reservas con pagos "completados"
-    ).all()
+        models.Reserva.estudiante_id == estudiante_id).all()
         
 
         # Crear respuesta detallada con información adicional

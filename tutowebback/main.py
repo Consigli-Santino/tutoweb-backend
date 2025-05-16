@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from tutowebback.models import models
 from tutowebback.config import database
 from tutowebback.urls import urlsUser, urlsCarrera, urlsRole, urlsMaterias, urlsMateriasCarreraUsuario, \
-    urlsDisponibilidad, urlsReserva, urlsServicioTutoria,urlsNotificacion,urlsPago
+    urlsDisponibilidad, urlsReserva, urlsServicioTutoria,urlsNotificacion,urlsPago,urlsCalificacion
 
 # Crear directorios para imágenes si no existen
 os.makedirs("uploads/profile_images", exist_ok=True)
@@ -21,7 +21,7 @@ os.makedirs("uploads/profile_images", exist_ok=True)
 models.Base.metadata.create_all(bind=database.engine)
 
 middleware = [
-    Middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+    Middleware(CORSMiddleware,   allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 ]
 app = FastAPI(
     title="TUTOWEB API",
@@ -43,6 +43,7 @@ app.include_router(urlsMateriasCarreraUsuario.router)
 app.include_router(urlsCarrera.router)
 app.include_router(urlsRole.router)
 app.include_router(urlsMaterias.router)
+app.include_router(urlsCalificacion.router)
 
 # Endpoint para crear usuario vendedor de prueba (solo ejecutar una vez)
 @app.get("/crear-usuario-vendedor")
