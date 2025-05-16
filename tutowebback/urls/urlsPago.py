@@ -69,3 +69,10 @@ async def get_pagos_by_estudiante(
 ):
     from tutowebback.controllers import pagoController
     return await pagoController.get_pagos_by_estudiante(db, current_user)
+@router.get("/pagos/tutor", response_model=None)
+async def get_pagos_by_tutor(
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.get_current_user),
+):
+    from tutowebback.controllers import pagoController
+    return await pagoController.get_pagos_by_tutor(db, current_user)

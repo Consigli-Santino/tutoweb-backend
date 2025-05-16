@@ -137,10 +137,23 @@ async def get_reservas_by_estudiante(db: Session, current_user: schemas.Usuario)
         logging.error(f"Error retrieving reservas: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-
+async def get_all_reservas(db: Session, current_user: schemas.Usuario = None):
+    try:
+        reserva_responses = reservaService.ReservaService().get_all_reservas_detalladas(db)
+        
+        return {
+            "success": True,
+            "data": reserva_responses,
+            "message": "Get all reservas successfully"
+        }
+    except HTTPException as he:
+        logging.error(f"HTTP error retrieving all reservas: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error retrieving all reservas: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 async def get_reservas_by_estudiante_detalladas(db: Session, current_user: schemas.Usuario):
     try:
-        # Delegar la lógica al servicio
         reserva_responses = reservaService.ReservaService().get_reservas_by_estudiante_detalladas(db,
                                                                                                   current_user["id"])
 

@@ -49,6 +49,13 @@ async def get_reservas_by_estudiante_detalladas(
     from tutowebback.controllers import reservaController
     return await reservaController.get_reservas_by_estudiante_detalladas(db, current_user)
 
+@router.get("/reservas/admin/all", response_model=None)
+async def get_all_reservas(
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin"])),
+):
+    from tutowebback.controllers import reservaController
+    return await reservaController.get_all_reservas(db, current_user)
 # En urlsReserva.py
 @router.get("/reservas/check", response_model=None)
 async def check_reservas(

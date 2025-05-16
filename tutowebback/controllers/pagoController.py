@@ -383,3 +383,25 @@ async def get_pagos_by_estudiante(db: Session, current_user: schemas.Usuario):
     except Exception as e:
         logging.error(f"Error retrieving pagos: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+async def get_pagos_by_tutor(db: Session, current_user: schemas.Usuario):
+    try:
+        # Obtener todos los pagos para las reservas del tutor actual
+        pagos_dict = pagoService.PagoService().get_pagos_by_tutor(db, current_user["id"])
+        
+        # Convertir a un formato adecuado para la respuesta
+        pagos_response = {}
+        for reserva_id, pago in pagos_dict.items():
+            pagos_response[reserva_id] = pago.to_dict_pago()
+        
+        return {
+            "success": True,
+            "data": pagos_response,
+            "message": "Get pagos by tutor successfully"
+        }
+    except HTTPException as he:
+        logging.error(f"HTTP error retrieving pagos for tutor: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error retrieving pagos for tutor: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")

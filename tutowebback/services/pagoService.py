@@ -288,5 +288,45 @@ class PagoService:
         except Exception as e:
             logging.error(f"Error getting pagos by estudiante: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
+                     # Añadir a pagoService.py
 
-
+    def get_pagos_by_tutor(self, db: Session, tutor_id: int):
+        """
+        Obtiene todos los pagos asociados a las reservas de un tutor
+        """
+        try:
+            # Primero obtenemos los servicios del tutor
+            servicios = db.query(models.ServicioTutoria).filter(
+                models.ServicioTutoria.tutor_id == tutor_id
+            ).all()
+            
+            if not servicios:
+                return {}
+                
+            # Obtenemos los IDs de los servicios
+            servicio_ids = [servicio.id for servicio in servicios]
+            
+            # Obtenemos todas las reservas para esos servicios
+            reservas = db.query(models.Reserva).filter(
+                models.Reserva.servicio_id.in_(servicio_ids)
+            ).all()
+            
+            if not reservas:
+                return {}
+                
+            # Obtenemos los IDs de las reservas
+            reserva_ids = [reserva.id for reserva in reservas]
+            
+            # Ahora obtenemos todos los pagos asociados a esas reservas
+            pagos = db.query(models.Pago).filter(
+                models.Pago.reserva_id.in_(reserva_ids)
+            ).all()
+            
+            # Organizamos los pagos por reserva_id para fácil acceso
+            pagos_dict = {pago.reserva_id: pago for pago in pagos}
+            
+            return pagos_dict
+            
+        except Exception as e:
+            logging.error(f"Error getting pagos by tutor: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
