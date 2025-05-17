@@ -91,17 +91,14 @@ async def get_reserva(id: int, db: Session, current_user: schemas.Usuario):
 
 async def get_reserva_detallada(id: int, db: Session, current_user: schemas.Usuario):
     try:
-        # Obtener la reserva detallada
         service = reservaService.ReservaService()
         db_reserva = service.get_reserva(db, id)
 
-        # Verificar que el usuario pueda ver esta reserva
         if (db_reserva.estudiante_id != current_user["id"] and
                 db_reserva.tutor_id != current_user["id"] and
                 current_user["user_rol"] not in ["superAdmin", "admin"]):
             raise HTTPException(status_code=403, detail="No estás autorizado para ver esta reserva")
 
-        # Obtener detalles completos
         reserva_response = service.get_reserva_detallada(db, id)
 
         return {
@@ -119,10 +116,8 @@ async def get_reserva_detallada(id: int, db: Session, current_user: schemas.Usua
 
 async def get_reservas_by_estudiante(db: Session, current_user: schemas.Usuario):
     try:
-        # Delegar la lógica al servicio
         db_reservas = reservaService.ReservaService().get_reservas_by_estudiante(db, current_user["id"])
 
-        # Transformar las reservas en formato de respuesta
         reserva_responses = [reserva.to_dict_reserva() for reserva in db_reservas]
 
         return {

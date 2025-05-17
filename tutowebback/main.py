@@ -45,40 +45,6 @@ app.include_router(urlsRole.router)
 app.include_router(urlsMaterias.router)
 app.include_router(urlsCalificacion.router)
 
-# Endpoint para crear usuario vendedor de prueba (solo ejecutar una vez)
-@app.get("/crear-usuario-vendedor")
-def endpoint_crear_vendedor():
-    mp_service = MercadoPagoService()
-    vendedor = mp_service.crear_usuario_vendedor()
-    if vendedor:
-        return {
-            "message": "Usuario vendedor de prueba creado exitosamente",
-            "vendedor": vendedor
-        }
-    else:
-        return {
-            "message": "Error al crear usuario vendedor de prueba"
-        }
-
-
-# Endpoint para probar la creación de preferencia
-@app.get("/crear-preferencia-prueba")
-def endpoint_crear_preferencia():
-    mp_service = MercadoPagoService()
-    preferencia = mp_service.crear_preferencia(
-        titulo="Producto de prueba",
-        precio=100,
-        cantidad=1,
-        reserva_id=1,
-        pago_id=1,
-        notas="Prueba de integración"
-    )
-
-    return {
-        "message": "Preferencia creada exitosamente",
-        "checkout_url": preferencia["init_point"],
-        "id": preferencia["id"]
-    }
 
 if __name__ == "__main__":
     import uvicorn

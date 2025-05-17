@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, BackgroundTasks, Body, Query, Request
 from sqlalchemy.orm import Session
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from schemas.schemas import ReservasIdsRequest
 from tutowebback.config import database
 from tutowebback.schemas import schemas
 from tutowebback.auth import auth
@@ -38,14 +39,14 @@ async def update_pago_estado(
     from tutowebback.controllers import pagoController
     return await pagoController.update_pago_estado(pago_id, estado, db, current_user, background_tasks)
 
-@router.get("/pago/reserva/{reserva_id}", response_model=None)
-async def get_pago_by_reserva(
-    reserva_id: int,
+@router.post("/pagos/reservas", response_model=None)
+async def get_pagos_by_reservas(
+    body: ReservasIdsRequest,
     db: Session = Depends(database.get_db),
     current_user: schemas.Usuario = Depends(auth.get_current_user),
 ):
     from tutowebback.controllers import pagoController
-    return await pagoController.get_pago_by_reserva(reserva_id, db, current_user)
+    return await pagoController.get_pagos_by_reservas(body.reserva_ids, db, current_user)
 
 @router.get("/mercadopago/public-key", response_model=None)
 async def get_mercadopago_public_key(
