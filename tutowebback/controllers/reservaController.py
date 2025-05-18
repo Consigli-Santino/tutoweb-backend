@@ -132,9 +132,21 @@ async def get_reservas_by_estudiante(db: Session, current_user: schemas.Usuario)
         logging.error(f"Error retrieving reservas: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-async def get_all_reservas(db: Session, current_user: schemas.Usuario = None):
+async def get_all_reservas(
+    db: Session,
+    current_user: schemas.Usuario = None,
+    fecha_desde: str = None,
+    fecha_hasta: str = None
+):
     try:
-        reserva_responses = reservaService.ReservaService().get_all_reservas_detalladas(db)
+        fecha_desde_dt = datetime.strptime(fecha_desde, "%Y-%m-%d").date() if fecha_desde else None
+        fecha_hasta_dt = datetime.strptime(fecha_hasta, "%Y-%m-%d").date() if fecha_hasta else None
+
+        reserva_responses = reservaService.ReservaService().get_all_reservas_detalladas(
+            db,
+            fecha_desde=fecha_desde_dt,
+            fecha_hasta=fecha_hasta_dt
+        )
         
         return {
             "success": True,
@@ -147,10 +159,22 @@ async def get_all_reservas(db: Session, current_user: schemas.Usuario = None):
     except Exception as e:
         logging.error(f"Error retrieving all reservas: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
-async def get_reservas_by_estudiante_detalladas(db: Session, current_user: schemas.Usuario):
+async def get_reservas_by_estudiante_detalladas(
+    db: Session,
+    current_user: schemas.Usuario,
+    fecha_desde: str = None,
+    fecha_hasta: str = None
+):
     try:
-        reserva_responses = reservaService.ReservaService().get_reservas_by_estudiante_detalladas(db,
-                                                                                                  current_user["id"])
+        fecha_desde_dt = datetime.strptime(fecha_desde, "%Y-%m-%d").date() if fecha_desde else None
+        fecha_hasta_dt = datetime.strptime(fecha_hasta, "%Y-%m-%d").date() if fecha_hasta else None
+
+        reserva_responses = reservaService.ReservaService().get_reservas_by_estudiante_detalladas(
+            db,
+            current_user["id"],
+            fecha_desde=fecha_desde_dt,
+            fecha_hasta=fecha_hasta_dt
+        )
 
         return {
             "success": True,
@@ -186,10 +210,22 @@ async def get_reservas_by_tutor(db: Session, current_user: schemas.Usuario):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-async def get_reservas_by_tutor_detalladas(db: Session, current_user: schemas.Usuario):
+async def get_reservas_by_tutor_detalladas(
+    db: Session,
+    current_user: schemas.Usuario,
+    fecha_desde: str = None,
+    fecha_hasta: str = None
+):
     try:
-        # Delegar la lógica al servicio
-        reserva_responses = reservaService.ReservaService().get_reservas_by_tutor_detalladas(db, current_user["id"])
+        fecha_desde_dt = datetime.strptime(fecha_desde, "%Y-%m-%d").date() if fecha_desde else None
+        fecha_hasta_dt = datetime.strptime(fecha_hasta, "%Y-%m-%d").date() if fecha_hasta else None
+
+        reserva_responses = reservaService.ReservaService().get_reservas_by_tutor_detalladas(
+            db,
+            current_user["id"],
+            fecha_desde=fecha_desde_dt,
+            fecha_hasta=fecha_hasta_dt
+        )
 
         return {
             "success": True,

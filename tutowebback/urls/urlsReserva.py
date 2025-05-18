@@ -43,19 +43,25 @@ async def get_reservas_by_estudiante(
 # Nuevo endpoint para obtener reservas detalladas del estudiante
 @router.get("/reservas/estudiante/detalladas", response_model=None)
 async def get_reservas_by_estudiante_detalladas(
+    fecha_desde: str = Query(None, description="Fecha desde en formato YYYY-MM-DD"),
+    fecha_hasta: str = Query(None, description="Fecha hasta en formato YYYY-MM-DD"),
     db: Session = Depends(database.get_db),
     current_user: schemas.Usuario = Depends(auth.get_current_user),
 ):
     from tutowebback.controllers import reservaController
-    return await reservaController.get_reservas_by_estudiante_detalladas(db, current_user)
+    return await reservaController.get_reservas_by_estudiante_detalladas(
+        db, current_user, fecha_desde, fecha_hasta
+    )
 
 @router.get("/reservas/admin/all", response_model=None)
 async def get_all_reservas(
+    fecha_desde: str = Query(None, description="Fecha desde en formato YYYY-MM-DD"),
+    fecha_hasta: str = Query(None, description="Fecha hasta en formato YYYY-MM-DD"),
     db: Session = Depends(database.get_db),
     current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin"])),
 ):
     from tutowebback.controllers import reservaController
-    return await reservaController.get_all_reservas(db, current_user)
+    return await reservaController.get_all_reservas(db, current_user, fecha_desde, fecha_hasta)
 # En urlsReserva.py
 @router.get("/reservas/check", response_model=None)
 async def check_reservas(
@@ -78,11 +84,15 @@ async def get_reservas_by_tutor(
 # Nuevo endpoint para obtener reservas detalladas del tutor
 @router.get("/reservas/tutor/detalladas", response_model=None)
 async def get_reservas_by_tutor_detalladas(
+    fecha_desde: str = Query(None, description="Fecha desde en formato YYYY-MM-DD"),
+    fecha_hasta: str = Query(None, description="Fecha hasta en formato YYYY-MM-DD"),
     db: Session = Depends(database.get_db),
     current_user: schemas.Usuario = Depends(auth.get_current_user),
 ):
     from tutowebback.controllers import reservaController
-    return await reservaController.get_reservas_by_tutor_detalladas(db, current_user)
+    return await reservaController.get_reservas_by_tutor_detalladas(
+        db, current_user, fecha_desde, fecha_hasta
+    )
 
 @router.put("/reserva/{id}", response_model=None)
 async def edit_reserva(
