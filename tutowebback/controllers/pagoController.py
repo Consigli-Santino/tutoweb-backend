@@ -81,48 +81,41 @@ async def update_pago_estado(pago_id: int, estado: str, db: Session, current_use
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-async def get_pago_by_reserva(reserva_id: int, db: Session, current_user: schemas.Usuario):
+async def get_pagos_by_reservas(reserva_ids: list, db: Session, current_user: schemas.Usuario):
     try:
-        # Verificar que la reserva exista
-        reserva = db.query(models.Reserva).filter(models.Reserva.id == reserva_id).first()
-        if not reserva:
-            raise HTTPException(status_code=404, detail="Reserva not found")
+        if not reserva_ids:
+            raise HTTPException(status_code=400, detail="No se proporcionaron IDs de reservas")
 
-        # Verificar permisos
-        is_estudiante = reserva.estudiante_id == current_user["id"]
+        reservas = db.query(models.Reserva).filter(models.Reserva.id.in_(reserva_ids),models.Reserva.estado=='completada').all()
+        reservas_permitidas = []
+        for reserva in reservas:
+            is_estudiante = reserva.estudiante_id == current_user["id"]
+            servicio = db.query(models.ServicioTutoria).filter(models.ServicioTutoria.id == reserva.servicio_id).first()
+            is_tutor = servicio and servicio.tutor_id == current_user["id"]
+            is_admin = current_user["user_rol"] in ["superAdmin", "admin"]
+            if is_estudiante or is_tutor or is_admin:
+                reservas_permitidas.append(reserva.id)
 
-        # Obtener el servicio para verificar si es el tutor
-        servicio = db.query(models.ServicioTutoria).filter(models.ServicioTutoria.id == reserva.servicio_id).first()
-        is_tutor = servicio and servicio.tutor_id == current_user["id"]
+        if not reservas_permitidas:
+            raise HTTPException(status_code=403, detail="No tienes permiso para ver estos pagos")
 
-        # Verificar si es admin
-        is_admin = current_user["user_rol"] in ["superAdmin", "admin"]
+        pagos = db.query(models.Pago).filter(models.Pago.reserva_id.in_(reservas_permitidas)).all()
 
-        if not (is_estudiante or is_tutor or is_admin):
-            raise HTTPException(status_code=403, detail="No tienes permiso para ver este pago")
-
-        # Obtener el pago
-        db_pago = pagoService.PagoService().get_pago_by_reserva(db, reserva_id)
-
-        if not db_pago:
-            return {
-                "success": True,
-                "data": None,
-                "message": "No hay pagos para esta reserva"
-            }
+        pagos_response = {}
+        for pago in pagos:
+            pagos_response.setdefault(pago.reserva_id, []).append(pago.to_dict_pago())
 
         return {
             "success": True,
-            "data": db_pago.to_dict_pago(),
-            "message": "Pago obtenido correctamente"
+            "data": pagos_response,
+            "message": "Pagos obtenidos correctamente"
         }
     except HTTPException as he:
-        logging.error(f"HTTP error getting pago: {he.detail}")
+        logging.error(f"HTTP error getting pagos by reservas: {he.detail}")
         raise he
     except Exception as e:
-        logging.error(f"Error getting pago: {e}")
+        logging.error(f"Error getting pagos by reservas: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
-
 
 async def get_mercadopago_public_key(current_user: schemas.Usuario):
     try:

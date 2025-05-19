@@ -338,6 +338,8 @@ class Calificacion(CalificacionBase):
     class Config:
         from_attributes = True
 
+class ReservasIdsRequest(BaseModel):
+    reserva_ids: List[int]
 # Esquemas para Notificacion
 class NotificacionBase(BaseModel):
     usuario_id: int
