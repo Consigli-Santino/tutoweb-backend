@@ -603,7 +603,6 @@ class ReservaService:
         Incluye información del servicio, materia, tutor y estudiante
         """
         try:
-            # Obtener todas las reservas, filtrando por fechas si corresponde
             query = db.query(models.Reserva)
             if fecha_desde:
                 query = query.filter(models.Reserva.fecha >= fecha_desde)
@@ -611,7 +610,6 @@ class ReservaService:
                 query = query.filter(models.Reserva.fecha <= fecha_hasta)
             reservas = query.all()
 
-            # Ordenar reservas: primero pendientes y confirmadas, luego por fecha más cercana
             sorted_reservas = sorted(reservas, key=lambda r: (
                 0 if r.estado == "pendiente" else
                 1 if r.estado == "confirmada" else
@@ -619,7 +617,6 @@ class ReservaService:
                 r.fecha
             ))
 
-            # Preparar respuesta detallada
             reserva_responses = []
 
             for reserva in sorted_reservas:

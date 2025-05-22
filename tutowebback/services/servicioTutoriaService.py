@@ -46,7 +46,7 @@ class ServicioTutoriaService:
                 models.ServicioTutoria.materia_id == servicio.materia_id
             ).first()
 
-            if servicio_existente.activo:
+            if servicio_existente and servicio_existente.activo:
                 raise HTTPException(
                     status_code=400,
                     detail="Ya existe un servicio para esta materia"
