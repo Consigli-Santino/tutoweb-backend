@@ -84,7 +84,7 @@ async def update_pago_estado(pago_id: int, estado: str, db: Session, current_use
 async def get_pagos_by_reservas(reserva_ids: list, db: Session, current_user: schemas.Usuario):
     try:
         if not reserva_ids:
-            raise HTTPException(status_code=400, detail="No se proporcionaron IDs de reservas")
+            raise HTTPException(status_code=409, detail="No tiene reservas para consultar ")
 
         reservas = db.query(models.Reserva).filter(models.Reserva.id.in_(reserva_ids),models.Reserva.estado=='completada').all()
         reservas_permitidas = []

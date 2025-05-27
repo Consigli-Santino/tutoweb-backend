@@ -10,9 +10,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware import Middleware
 from fastapi.staticfiles import StaticFiles
-from tutowebback.models import models
-from tutowebback.config import database
-from tutowebback.urls import urlsUser, urlsCarrera, urlsRole, urlsMaterias, urlsMateriasCarreraUsuario, \
+from models import models
+from config import database
+from urls import urlsUser, urlsCarrera, urlsRole, urlsMaterias, urlsMateriasCarreraUsuario, \
     urlsDisponibilidad, urlsReserva, urlsServicioTutoria,urlsNotificacion,urlsPago,urlsCalificacion
 
 # Crear directorios para imágenes si no existen

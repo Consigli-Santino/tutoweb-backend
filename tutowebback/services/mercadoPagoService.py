@@ -32,7 +32,7 @@ class MercadoPagoService:
         """
         try:
             # Obtener la URL base del backend - debe ser accesible desde internet (URL de ngrok)
-            backend_url = os.getenv('BACKEND_URL', 'https://88dc-181-91-212-87.ngrok-free.app')
+            backend_url = os.getenv('BACKEND_URL', 'https://9fde-181-91-212-87.ngrok-free.app')
 
             # Verifica que backend_url no sea localhost si estás usando auto_return
             if 'localhost' in backend_url or '127.0.0.1' in backend_url:
