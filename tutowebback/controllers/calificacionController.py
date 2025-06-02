@@ -149,3 +149,30 @@ async def get_calificaciones_for_estudiante_reservas(db: Session, current_user: 
     except Exception as e:
         logging.error(f"Error retrieving calificaciones: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+async def get_calificaciones_by_date_range(
+    fecha_desde: str = None,
+    fecha_hasta: str = None, 
+    usuario_id: int = None,
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.get_current_user)
+):
+    try:
+        # Toda la lógica está en el service
+        calificaciones_response = calificacionService.CalificacionService().get_calificaciones_by_date_range_formatted(
+            db, fecha_desde, fecha_hasta, usuario_id
+        )
+
+        return {
+            "success": True,
+            "data": calificaciones_response,
+            "message": f"Se encontraron {len(calificaciones_response)} calificaciones",
+            "total": len(calificaciones_response)
+        }
+        
+    except HTTPException as he:
+        logging.error(f"HTTP error retrieving calificaciones by date range: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error retrieving calificaciones by date range: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")

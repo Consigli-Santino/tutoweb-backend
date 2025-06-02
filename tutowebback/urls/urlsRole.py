@@ -21,7 +21,7 @@ async def create(
 @router.get("/roles/all", response_model=None)
 async def get_all_roles(
     db: Session = Depends(database.get_db),
-    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "eDefuncionAdmin", "eNacimientoAdmin"])),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "alumno&tutor"])),
 ):
     from tutowebback.controllers import roleController
     return await roleController.get_all_roles(db, current_user)
