@@ -1,7 +1,7 @@
 import os
 import sys
 
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from fastapi.responses import FileResponse
@@ -70,7 +70,6 @@ async def get_tutores_by_carrera_with_materias(
 ):
     from tutowebback.controllers import userController
     return await userController.get_tutores_by_carrera_with_materias(db, current_user, carrera_id)
-# Endpoint para edición con imagen
 @router.put("/usuario/{emailParam}/form", response_model=None)
 async def edit_usuario_form(
         emailParam: str,
@@ -82,40 +81,52 @@ async def edit_usuario_form(
         profile_image: Optional[UploadFile] = File(None),
         id_rol: Optional[int] = Form(None),
         db: Session = Depends(database.get_db),
-        current_user: schemas.Usuario = Depends(auth.role_required(["alumno&profesor", "alumno","superAdmin"])),
+        current_user: schemas.Usuario = Depends(auth.role_required(["alumno&tutor", "alumno","superAdmin"])),
 ):
-    # Crear objeto UsuarioUpdate
     usuario = schemas.UsuarioUpdate(
         nombre=nombre,
         apellido=apellido,
         email=email,
         password=password,
-        foto_perfil=None,  # Se actualizará en el controller
+        foto_perfil=None, 
         id_rol=id_rol,
         id_carrera=id_carrera
     )
 
-    # Llamar al controlador con la imagen
     from tutowebback.controllers import userController
     return await userController.edit_usuario(emailParam, usuario, db, current_user, profile_image)
 
 
-# Endpoint para servir imágenes
 @router.get("/uploads/{path:path}")
 async def get_upload(path: str):
-    full_path = os.path.join(os.getcwd(), "uploads", path)
-    if os.path.exists(full_path) and os.path.isfile(full_path):
-        return FileResponse(full_path)
-
-    from fastapi import HTTPException
-    raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    try:
+        full_path = os.path.join(os.getcwd(), "uploads", path)
+        
+        if not os.path.exists(full_path) or not os.path.isfile(full_path):
+            raise HTTPException(status_code=404, detail="Archivo no encontrado")
+        
+        return FileResponse(
+            full_path,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET",
+                "Access-Control-Allow-Headers": "*",
+                "ngrok-skip-browser-warning": "true",  
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
+    except Exception as e:
+        print(f"Error sirviendo archivo: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al servir archivo: {str(e)}")
 
 
 # Resto de endpoints sin cambios
 @router.get("/usuarios/all", response_model=None)
 async def get_all_usuarios(
         db: Session = Depends(database.get_db),
-        current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "tutor"])),
+        current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin", "tutor","alumno"])),
 ):
     from tutowebback.controllers import userController
     return await userController.get_all_usuarios(db, current_user)

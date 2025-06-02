@@ -1,4 +1,4 @@
-# urlsNotificacion.py
+# urlsNotificacion.py - Versión completa
 
 import os
 import sys
@@ -13,61 +13,100 @@ from tutowebback.auth import auth
 router = APIRouter(tags=["Notificaciones"])
 
 
-@router.get("/notificaciones", response_model=None)
-def get_notificaciones(
-        solo_no_leidas: bool = Query(False, description="Si es True, solo devuelve notificaciones no leídas"),
-        db: Session = Depends(database.get_db),
-        current_user: schemas.Usuario = Depends(auth.get_current_user),
+@router.post("/notificaciones/create", response_model=None)
+async def create_notificacion(
+    notificacion: schemas.NotificacionCreate,
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin"])),
 ):
-    from tutowebback.services import notificacionService
-    notificaciones = notificacionService.obtener_notificaciones_usuario(
-        db, current_user["id"], solo_no_leidas
-    )
+    from tutowebback.controllers import notificacionController
+    return await notificacionController.create_notificacion(notificacion, db, current_user)
 
-    # Convertir a formato de respuesta
-    notificaciones_response = [notif.to_dict_notificacion() for notif in notificaciones]
 
-    return {
-        "success": True,
-        "data": notificaciones_response,
-        "message": "Get notificaciones successfully"
-    }
-@router.get("/calificaciones/estudiante/reservas", response_model=None)
-async def get_calificaciones_for_estudiante_reservas(
+@router.get("/notificaciones", response_model=None)
+async def get_notificaciones(
+    solo_no_leidas: bool = Query(False, description="Si es True, solo devuelve notificaciones no leídas"),
     db: Session = Depends(database.get_db),
     current_user: schemas.Usuario = Depends(auth.get_current_user),
 ):
-    from tutowebback.controllers import calificacionController
-    return await calificacionController.get_calificaciones_for_estudiante_reservas(db, current_user)
+    from tutowebback.controllers import notificacionController
+    return await notificacionController.get_notificaciones_by_user(db, current_user, solo_no_leidas)
 
-@router.put("/notificaciones/{notificacion_id}/leer", response_model=None)
-def marcar_notificacion_como_leida(
-        notificacion_id: int,
-        db: Session = Depends(database.get_db),
-        current_user: schemas.Usuario = Depends(auth.get_current_user),
+
+@router.get("/notificaciones/all", response_model=None)
+async def get_all_notificaciones(
+    fecha_desde: str = Query(None, description="Fecha desde en formato YYYY-MM-DD"),
+    fecha_hasta: str = Query(None, description="Fecha hasta en formato YYYY-MM-DD"),
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin"])),
+):
+    from tutowebback.controllers import notificacionController
+    return await notificacionController.get_all_notificaciones(db, current_user, fecha_desde, fecha_hasta)
+
+
+@router.get("/notificaciones/tipo/{tipo}", response_model=None)
+async def get_notificaciones_by_tipo(
+    tipo: str,
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.get_current_user),
 ):
     from tutowebback.services import notificacionService
-    notificacion = notificacionService.marcar_notificacion_como_leida(
-        db, notificacion_id, current_user["id"]
+    notificaciones = notificacionService.obtener_notificaciones_por_tipo(
+        db, current_user["id"], tipo
     )
-
+    
+    notificaciones_response = [notif.to_dict_notificacion() for notif in notificaciones]
+    
     return {
         "success": True,
-        "data": notificacion.to_dict_notificacion(),
-        "message": "Notificación marcada como leída"
+        "data": notificaciones_response,
+        "message": f"Get notificaciones by tipo {tipo} successfully"
     }
+
+
+@router.get("/notificaciones/estadisticas", response_model=None)
+async def get_estadisticas_notificaciones(
+    fecha_desde: str = Query(None, description="Fecha desde en formato YYYY-MM-DD"),
+    fecha_hasta: str = Query(None, description="Fecha hasta en formato YYYY-MM-DD"),
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "admin"])),
+):
+    from tutowebback.services import notificacionService
+    estadisticas = notificacionService.obtener_estadisticas_notificaciones(
+        db, fecha_desde, fecha_hasta
+    )
+    
+    return {
+        "success": True,
+        "data": estadisticas,
+        "message": "Get estadísticas notificaciones successfully"
+    }
+
+
+@router.put("/notificaciones/{notificacion_id}/leer", response_model=None)
+async def marcar_notificacion_como_leida(
+    notificacion_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.get_current_user),
+):
+    from tutowebback.controllers import notificacionController
+    return await notificacionController.mark_notificacion_as_read(notificacion_id, db, current_user)
 
 
 @router.put("/notificaciones/leer-todas", response_model=None)
-def marcar_todas_como_leidas(
-        db: Session = Depends(database.get_db),
-        current_user: schemas.Usuario = Depends(auth.get_current_user),
+async def marcar_todas_como_leidas(
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.get_current_user),
 ):
-    from tutowebback.services import notificacionService
-    count = notificacionService.marcar_todas_como_leidas(db, current_user["id"])
+    from tutowebback.controllers import notificacionController
+    return await notificacionController.mark_all_as_read(db, current_user)
 
-    return {
-        "success": True,
-        "data": {"count": count},
-        "message": f"Se marcaron {count} notificaciones como leídas"
-    }
+
+@router.delete("/notificaciones/{notificacion_id}", response_model=None)
+async def delete_notificacion(
+    notificacion_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.get_current_user),
+):
+    from tutowebback.controllers import notificacionController
+    return await notificacionController.delete_notificacion(notificacion_id, db, current_user)

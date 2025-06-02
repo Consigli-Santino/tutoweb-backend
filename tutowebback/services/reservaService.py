@@ -22,12 +22,13 @@ class ReservaService:
             estudiante = db.query(models.Usuario).filter(models.Usuario.id == reserva.estudiante_id).first()
             if not estudiante:
                 raise HTTPException(status_code=404, detail="Estudiante not found")
-
+         
             # Verificar si existe el servicio de tutoría
             servicio = db.query(models.ServicioTutoria).filter(models.ServicioTutoria.id == reserva.servicio_id).first()
             if not servicio:
                 raise HTTPException(status_code=404, detail="Servicio de tutoría not found")
-
+            if reserva.estudiante_id == servicio.tutor_id:
+                raise HTTPException(status_code=404, detail="El estudiante no puede ser el mismo que el tutor")
             # Verificar que el servicio esté activo
             if not servicio.activo:
                 raise HTTPException(status_code=400, detail="El servicio de tutoría no está activo")
@@ -113,6 +114,9 @@ class ReservaService:
         except IntegrityError:
             db.rollback()
             raise HTTPException(status_code=400, detail="Error creating reserva")
+        except HTTPException as http_exc:
+            db.rollback()
+            raise http_exc  # Relanza la excepción original para mantener el status code y el mensaje
         except Exception as e:
             db.rollback()
             logging.error(f"Error creating reserva: {e}")
