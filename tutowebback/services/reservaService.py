@@ -12,7 +12,41 @@ from tutowebback.schemas import schemas
 from tutowebback.services import notificacionService
 
 
+
+
 class ReservaService:
+
+    def validate_if_have_resevas_unpage_for_more_than_3_days(self, db: Session, estudiante_id: int):
+        """
+        Verifica si un estudiante tiene reservas completadas sin pagar por más de 3 días.
+        Si es así, lanza una excepción HTTP 409.
+        """
+        try:
+            reservas = db.query(models.Reserva).filter(
+                models.Reserva.estudiante_id == estudiante_id,
+                models.Reserva.estado == "completada"
+            ).all()
+            if not reservas:
+                return
+            fecha_actual = datetime.now().date()
+            for reserva in reservas:
+                if reserva.fecha < fecha_actual - timedelta(days=3):
+                    pago_completado = db.query(models.Pago).filter(
+                        models.Pago.reserva_id == reserva.id,
+                        models.Pago.estado == "completado"
+                    ).first()
+                    if not pago_completado:
+                        raise HTTPException(
+                            status_code=409,
+                            detail="No puedes realizar nuevas reservas porque tienes reservas completadas sin pagar por más de 3 días"
+                        )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logging.error(f"Error validating reservas sin pagar: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+
+   
     def create_reserva(self, db: Session, reserva: schemas.ReservaCreate):
         """
         Crea una nueva reserva y envía notificaciones
@@ -22,7 +56,7 @@ class ReservaService:
             estudiante = db.query(models.Usuario).filter(models.Usuario.id == reserva.estudiante_id).first()
             if not estudiante:
                 raise HTTPException(status_code=404, detail="Estudiante not found")
-         
+            self.validate_if_have_resevas_unpage_for_more_than_3_days(db, reserva.estudiante_id)
             # Verificar si existe el servicio de tutoría
             servicio = db.query(models.ServicioTutoria).filter(models.ServicioTutoria.id == reserva.servicio_id).first()
             if not servicio:
@@ -55,7 +89,6 @@ class ReservaService:
                 models.Reserva.servicio_id == reserva.servicio_id,
                 models.Reserva.fecha == reserva.fecha,
                 models.Reserva.estado.in_(["pendiente", "confirmada"]),
-                # Verificar superposición de horarios
                 ((models.Reserva.hora_inicio <= reserva.hora_inicio) &
                  (models.Reserva.hora_fin > reserva.hora_inicio)) |
                 ((models.Reserva.hora_inicio < reserva.hora_fin) &
