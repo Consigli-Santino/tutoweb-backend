@@ -35,6 +35,26 @@ async def create_reserva(reserva: schemas.ReservaCreate, db: Session, current_us
         logging.error(f"Error creating reserva: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
+async def get_next_reserva_time(db,current_user: schemas.Usuario):
+    try:
+        next_time = reservaService.ReservaService().get_next_reserva_time(db, current_user["id"])
+        if not next_time:
+            return {
+                "success": False,
+                "message": "No hay reservas futuras"
+            }
+
+        return {
+            "success": True,
+            "data": next_time,
+            "message": "Next reserva time retrieved successfully"
+        }
+    except HTTPException as he:
+        logging.error(f"HTTP error retrieving next reserva time: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error retrieving next reserva time: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 async def check_reservas(tutor_id: int, fecha_str: str, db: Session):
     try:
@@ -346,4 +366,42 @@ async def get_horarios_disponibles(servicio_id: int, fecha_str: str, db: Session
         raise he
     except Exception as e:
         logging.error(f"Error retrieving horarios disponibles: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+async def get_reservas_actions(
+    db: Session,
+    body: schemas.ReservasIdsRequest = None,
+    current_user: schemas.Usuario = Depends(auth.get_current_user)
+):
+    try:
+        actions = reservaService.ReservaService().get_reservas_actions(db,body)
+
+        return {
+            "success": True,
+            "data": actions,
+            "message": "Get reservas actions successfully"
+        }
+    except HTTPException as he:
+        logging.error(f"HTTP error retrieving reservas actions: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error retrieving reservas actions: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+async def post_reserva_actions(
+    id_reserva: int,
+    db: Session,
+    current_user: schemas.Usuario = Depends(auth.get_current_user)
+):
+    try:
+        actions = reservaService.ReservaService().post_reserva_actions(db,id_reserva, current_user)
+
+        return {
+            "success": True,
+            "data": actions,
+            "message": "Post reserva actions successfully"
+        }
+    except HTTPException as he:
+        logging.error(f"HTTP error posting reserva actions: {he.detail}")
+        raise he
+    except Exception as e:
+        logging.error(f"Error posting reserva actions: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")

@@ -122,3 +122,27 @@ async def get_disponibilidades_disponibles(
 ):
     from tutowebback.controllers import reservaController
     return await reservaController.get_disponibilidades_disponibles(tutor_id, fecha, db)
+@router.post("/reservas/actions", response_model=None)
+async def get_reservas_actions(
+    body: schemas.ReservasIdsRequest,
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "alumno","alumno&tutor"])),
+):
+    from tutowebback.controllers import reservaController
+    return await reservaController.get_reservas_actions(db,body,current_user)
+@router.post("/reservas/estudiante/actions", response_model=None)
+async def post_reserva_action(
+    id_reserva: int,
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "alumno","alumno&tutor"])),
+):
+    from tutowebback.controllers import reservaController
+    return await reservaController.post_reserva_actions(id_reserva, db, current_user)
+
+@router.get("/next/reserva/time", response_model=None)
+async def get_next_reserva_time(
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.role_required(["superAdmin", "alumno","alumno&tutor"])),
+):
+    from tutowebback.controllers import reservaController
+    return await reservaController.get_next_reserva_time(db, current_user)

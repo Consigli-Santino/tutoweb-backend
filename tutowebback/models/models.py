@@ -252,6 +252,7 @@ class Reserva(Base):
     estudiante = relationship("Usuario", foreign_keys=[estudiante_id], back_populates="reservas_estudiante")
     servicio = relationship("ServicioTutoria", back_populates="reservas")
     pagos = relationship("Pago", back_populates="reserva")
+    actions = relationship("ReservaActions", back_populates="reserva", uselist=False)
     calificaciones = relationship("Calificacion", back_populates="reserva")
     notificaciones = relationship("Notificacion", back_populates="reserva")
 
@@ -268,7 +269,24 @@ class Reserva(Base):
             "sala_virtual": self.sala_virtual,
             "fecha_creacion": self.fecha_creacion.isoformat() if self.fecha_creacion else None
         }
+class ReservaActions(Base):
+    __tablename__ = 'reserva_actions'
 
+    id = Column(Integer, primary_key=True)
+    reserva_id = Column(Integer, ForeignKey('reservas.id', ondelete='CASCADE'), nullable=False)
+    tutor_opened = Column(Boolean, default=False)
+    estudiante_opened = Column(Boolean, default=False)
+
+    # Relationships
+    reserva = relationship("Reserva", back_populates="actions")
+
+    def to_dict_reserva_action(self):
+        return {
+            "id": self.id,
+            "reserva_id": self.reserva_id,
+            "tutor_opened": self.tutor_opened,
+            "estudiante_opened": self.estudiante_opened
+        }
 
 class Pago(Base):
     __tablename__ = 'pagos'

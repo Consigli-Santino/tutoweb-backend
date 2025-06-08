@@ -28,9 +28,7 @@ app = FastAPI(
     description="API para la gestión de perfiles, autenticacion, clases, reservas, pagos del sistema TutoWeb",
     middleware=middleware
 )
-
-# Montar directorio para servir archivos estáticos
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/uploads", StaticFiles(directory="tutowebback/uploads"), name="uploads")
 
 # Incluir todas las rutas definidas
 app.include_router(urlsUser.router)
