@@ -55,3 +55,10 @@ async def get_calificaciones_by_estudiante(
 ):
     from tutowebback.controllers import calificacionController
     return await calificacionController.get_calificaciones_by_estudiante(db, current_user)
+@router.get("/calificaciones/estudiante/reserva", response_model=None)
+async def get_calificaciones_by_estudiante(
+    db: Session = Depends(database.get_db),
+    current_user: schemas.Usuario = Depends(auth.get_current_user),
+):
+    from tutowebback.controllers import calificacionController
+    return await calificacionController.get_calificaciones_for_estudiante_reservas(db, current_user)

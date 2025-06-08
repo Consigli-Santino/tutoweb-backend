@@ -1,5 +1,6 @@
 import os
 import sys
+from sqlalchemy import true
 from sqlalchemy.orm import Session, joinedload, aliased
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException
@@ -710,4 +711,113 @@ class ReservaService:
 
         except Exception as e:
             logging.error(f"Error obteniendo todas las reservas detalladas: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+    def get_reservas_actions(self,db: Session, body: schemas.ReservasIdsRequest):
+        """
+        Obtiene las reservas según los IDs proporcionados en el body.
+        """
+        try:
+            if not body.reserva_ids:
+                raise HTTPException(status_code=400, detail="No se proporcionaron IDs de reservas")
+
+            reservasActions = db.query(models.ReservaActions).filter(
+                models.ReservaActions.reserva_id.in_(body.reserva_ids)
+            ).all()
+
+            if not reservasActions:
+                raise HTTPException(status_code=409, detail="No se encontraron acciones con los IDs proporcionados")
+
+            return [reserva.to_dict_reserva_action() for reserva in reservasActions]
+        except HTTPException as http_exc:
+           raise http_exc
+        except Exception as e:
+            logging.error(f"Error obteniendo reservas por IDs: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    def post_reserva_actions(self, db: Session, id_reserva: int, current_user: schemas.Usuario):
+        """
+        Crea o actualiza una acción para una reserva específica.
+        """
+        try:
+            if not id_reserva or not current_user:
+                raise HTTPException(status_code=400, detail="Reserva ID y usuario actual son requeridos")
+
+            # Verificar si la reserva existe
+            reserva = db.query(models.Reserva).filter(models.Reserva.id == id_reserva).first()
+            if not reserva:
+                raise HTTPException(status_code=404, detail="Reserva no encontrada")
+
+            # Verificar si el usuario tiene permisos para crear una acción en esta reserva
+            if reserva.estudiante_id != current_user["id"] and reserva.servicio.tutor_id != current_user["id"]:
+                raise HTTPException(status_code=403, detail="No tienes permiso para crear una acción en esta reserva")
+
+            # Verificar si ya existe una acción para esta reserva
+            existing_action = db.query(models.ReservaActions).filter(
+                models.ReservaActions.reserva_id == id_reserva,
+            ).first()
+
+            if not existing_action:
+                if current_user["user_rol"] == "alumno":
+                    reserva_action = models.ReservaActions(
+                        reserva_id=id_reserva,
+                        estudiante_opened=True,
+                        tutor_opened=False
+                    )
+                elif current_user["user_rol"] == "alumno&tutor":
+                    reserva_action = models.ReservaActions(
+                        reserva_id=id_reserva,
+                        estudiante_opened=False,
+                        tutor_opened=True
+                    )
+                else:
+                    raise HTTPException(status_code=400, detail="Rol de usuario no válido")
+                db.add(reserva_action)
+            else:
+                # Editar el registro existente
+                if current_user["user_rol"] == "alumno":
+                    existing_action.estudiante_opened = True
+                elif current_user["user_rol"] == "alumno&tutor":
+                    existing_action.tutor_opened = True
+                else:
+                    raise HTTPException(status_code=400, detail="Rol de usuario no válido")
+                reserva_action = existing_action
+
+            db.commit()
+            db.refresh(reserva_action)
+            return reserva_action.to_dict_reserva_action()
+
+        except HTTPException as http_exc:
+            raise http_exc
+        except Exception as e:
+            logging.error(f"Error creando acción de reserva: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    def get_next_reserva_time(self, db: Session, current_user_id: int):
+        """
+        Obtiene la próxima hora de la reserva confirmada más reciente del usuario actual.
+        """
+        try:
+            # Buscar la próxima reserva confirmada del usuario ordenada por fecha y hora de inicio
+            reserva = db.query(models.Reserva).filter(
+                models.Reserva.estudiante_id == current_user_id,
+                models.Reserva.estado == "confirmada",
+                models.Reserva.fecha >= datetime.now().date()
+            ).order_by(
+                models.Reserva.fecha.asc(),
+                models.Reserva.hora_inicio.asc()
+            ).first()
+
+            if not reserva:
+                raise HTTPException(status_code=404, detail="No se encontró una próxima reserva confirmada")
+
+            # Retornar la fecha y hora de la reserva
+            return {
+                "fecha": reserva.fecha.isoformat(),
+                "hora_inicio": reserva.hora_inicio.isoformat(),
+            }
+
+        except HTTPException as http_exc:
+            raise http_exc
+        except Exception as e:
+            logging.error(f"Error obteniendo próxima reserva: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")

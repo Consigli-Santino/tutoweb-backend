@@ -12,8 +12,9 @@ class ImageService:
     """
 
     def __init__(self):
-        # Configurar directorios para almacenamiento
-        self.base_dir = Path("uploads")
+        
+        project_root = Path(__file__).resolve().parent.parent  # Solo 2 .parent
+        self.base_dir = project_root / "uploads"
         self.profile_dir = self.base_dir / "profile_images"
 
         # Crear directorios si no existen
