@@ -90,8 +90,8 @@ class UsuarioService:
             raise HTTPException(status_code=404, detail="Tutores not found")
         return db_tutores
 
-    def edit_usuario(self, db: Session, emailParam: str, usuario: schemas.UsuarioUpdate):
-        db_usuario = self.get_usuario_by_email(db, emailParam)
+    def edit_usuario(self, db: Session, emailParam: str,id:int, usuario: schemas.UsuarioUpdate):
+        db_usuario = self.get_usuario_by_id(db, id)
         try:
             # Actualizar campos básicos si se proporcionan
             if usuario.nombre is not None:
@@ -166,6 +166,11 @@ class UsuarioService:
 
     def get_usuario_by_email(self, db, email):
         db_usuario = db.query(models.Usuario).filter(models.Usuario.email == email).first()
+        if db_usuario is None:
+            raise HTTPException(status_code=404, detail="Usuario not found")
+        return db_usuario
+    def get_usuario_by_id(self, db: Session, usuario_id: int):
+        db_usuario = db.query(models.Usuario).filter(models.Usuario.id == usuario_id).first()
         if db_usuario is None:
             raise HTTPException(status_code=404, detail="Usuario not found")
         return db_usuario

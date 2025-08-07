@@ -7,7 +7,7 @@ from typing import List, Optional
 from fastapi.responses import FileResponse
 from fastapi import Request
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from tutowebback.config import database
+from config import database
 from tutowebback.schemas import schemas
 from tutowebback.auth import auth
 
@@ -73,6 +73,7 @@ async def get_tutores_by_carrera_with_materias(
 @router.put("/usuario/{emailParam}/form", response_model=None)
 async def edit_usuario_form(
         emailParam: str,
+        id: Optional[int] = Form(None),
         nombre: Optional[str] = Form(None),
         apellido: Optional[str] = Form(None),
         email: Optional[str] = Form(None),
@@ -94,7 +95,7 @@ async def edit_usuario_form(
     )
 
     from tutowebback.controllers import userController
-    return await userController.edit_usuario(emailParam, usuario, db, current_user, profile_image)
+    return await userController.edit_usuario(emailParam,id, usuario, db, current_user, profile_image)
 
 
 @router.get("/uploads/{path:path}")
