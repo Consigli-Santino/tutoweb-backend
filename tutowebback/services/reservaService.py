@@ -163,20 +163,19 @@ class ReservaService:
         db_reserva = db.query(models.Reserva).filter(models.Reserva.id == id).first()
         if db_reserva is None:
             raise HTTPException(status_code=404, detail="Reserva not found")
-        return db_reserva
+        return self.get_reserva_detallada(db, id)
+
 
     def get_reserva_detallada(self, db: Session, id: int):
         """
-        Obtiene una reserva con detalles completos (servicio, materia, tutor)
+        Obtiene una reserva con detalles completos (servicio, materia, tutor, estudiante)
         """
         db_reserva = db.query(models.Reserva).filter(models.Reserva.id == id).first()
         if db_reserva is None:
             raise HTTPException(status_code=404, detail="Reserva not found")
 
-        # Obtener información adicional
         reserva_dict = db_reserva.to_dict_reserva()
 
-        # Obtener servicio asociado
         servicio = db.query(models.ServicioTutoria).filter(
             models.ServicioTutoria.id == db_reserva.servicio_id
         ).options(
@@ -184,18 +183,19 @@ class ReservaService:
             joinedload(models.ServicioTutoria.tutor)
         ).first()
 
-        # Añadir información del servicio
         if servicio:
             reserva_dict["servicio"] = servicio.to_dict_servicio_tutoria()
-
-            # Añadir información del tutor
             if hasattr(servicio, 'tutor') and servicio.tutor:
                 reserva_dict["tutor"] = servicio.tutor.to_dict_usuario()
-
-            # Añadir información de la materia
             if hasattr(servicio, 'materia') and servicio.materia:
                 reserva_dict["materia"] = servicio.materia.to_dict_materia()
 
+        estudiante = db.query(models.Usuario).filter(
+            models.Usuario.id == db_reserva.estudiante_id
+        ).first()
+        if estudiante:
+            reserva_dict["estudiante"] = estudiante.to_dict_usuario()
+        
         return reserva_dict
 
     def get_reservas_by_estudiante(self, db: Session, estudiante_id: int):
@@ -275,6 +275,7 @@ class ReservaService:
     ):
         """
         Obtiene todas las reservas de un tutor con detalles completos y filtrado por fechas si se proveen.
+        Incluye información del estudiante.
         """
         # Obtener los servicios del tutor
         servicios = db.query(models.ServicioTutoria).filter(models.ServicioTutoria.tutor_id == tutor_id).all()
@@ -306,10 +307,16 @@ class ReservaService:
                 if hasattr(servicio, 'materia') and servicio.materia:
                     reserva_dict["materia"] = servicio.materia.to_dict_materia()
 
+            # Incluir información del estudiante
+            estudiante = db.query(models.Usuario).filter(
+                models.Usuario.id == reserva.estudiante_id
+            ).first()
+            if estudiante:
+                reserva_dict["estudiante"] = estudiante.to_dict_usuario()
+
             reserva_responses.append(reserva_dict)
 
         return reserva_responses
-
     def check_reservas_by_fecha_tutor(self, db: Session, tutor_id: int, fecha: date):
         """
         Obtiene reservas de un tutor para una fecha específica
@@ -341,7 +348,10 @@ class ReservaService:
         Edita una reserva existente y gestiona notificaciones para cada cambio
         """
         try:
-            db_reserva = self.get_reserva(db, id)
+            # Obtener el objeto ORM, no el dict detallado
+            db_reserva = db.query(models.Reserva).filter(models.Reserva.id == id).first()
+            if db_reserva is None:
+                raise HTTPException(status_code=404, detail="Reserva not found")
 
             # Obtener información inicial para comparar con los cambios
             old_estado = db_reserva.estado

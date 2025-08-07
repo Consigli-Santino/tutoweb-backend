@@ -97,7 +97,7 @@ async def get_pagos_by_reservas(reserva_ids: list, db: Session, current_user: sc
                 reservas_permitidas.append(reserva.id)
 
         if not reservas_permitidas:
-            raise HTTPException(status_code=403, detail="No tienes permiso para ver estos pagos")
+            raise HTTPException(status_code=403, detail="No tienes pagos relacionados a las reservas solicitadas")
 
         pagos = db.query(models.Pago).filter(models.Pago.reserva_id.in_(reservas_permitidas)).all()
 

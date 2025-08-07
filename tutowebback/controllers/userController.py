@@ -145,7 +145,7 @@ async def get_tutores(db: Session, current_user: schemas.Usuario = None):
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-async def edit_usuario(emailParam: str, usuario: schemas.UsuarioUpdate, db: Session,
+async def edit_usuario(emailParam: str,id:int, usuario: schemas.UsuarioUpdate, db: Session,
                        current_user: schemas.Usuario = None,
                        profile_image: Optional[UploadFile] = None):
     """
@@ -158,7 +158,7 @@ async def edit_usuario(emailParam: str, usuario: schemas.UsuarioUpdate, db: Sess
     try:
         # Obtener usuario actual para tener info de imagen antigua
         service = usersService.UsuarioService()
-        db_usuario = service.get_usuario_by_email(db, emailParam)
+        db_usuario = service.get_usuario_by_id(db, id)
         old_image_path = db_usuario.foto_perfil
 
         # Si hay nueva imagen, procesarla
@@ -174,7 +174,7 @@ async def edit_usuario(emailParam: str, usuario: schemas.UsuarioUpdate, db: Sess
                 usuario.foto_perfil = new_image_path
 
         # Continuar con la actualización normal
-        db_usuario = service.edit_usuario(db, emailParam, usuario)
+        db_usuario = service.edit_usuario(db, emailParam,id, usuario)
 
         # Commit a nivel de controlador
         db.commit()

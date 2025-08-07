@@ -85,20 +85,21 @@ async def check_reservas(tutor_id: int, fecha_str: str, db: Session):
 
 async def get_reserva(id: int, db: Session, current_user: schemas.Usuario):
     try:
-        # Obtener la reserva del servicio
-        db_reserva = reservaService.ReservaService().get_reserva(db, id)
+        # Obtener la reserva detallada (ya es un dict)
+        reserva_detallada = reservaService.ReservaService().get_reserva(db, id)
 
-        # Verificar que el usuario pueda ver esta reserva
-        if (db_reserva.estudiante_id != current_user["id"] and
-                db_reserva.tutor_id != current_user["id"] and
+        # Verificar permisos usando los datos del dict
+        estudiante_id = reserva_detallada.get("estudiante_id")
+        tutor_id = reserva_detallada.get("tutor", {}).get("id") or reserva_detallada.get("servicio", {}).get("tutor_id")
+
+        if (estudiante_id != current_user["id"] and
+                tutor_id != current_user["id"] and
                 current_user["user_rol"] not in ["superAdmin", "admin"]):
             raise HTTPException(status_code=403, detail="No estás autorizado para ver esta reserva")
 
-        reserva_response = db_reserva.to_dict_reserva()
-
         return {
             "success": True,
-            "data": reserva_response,
+            "data": reserva_detallada,
             "message": "Get reserva successfully"
         }
     except HTTPException as he:
